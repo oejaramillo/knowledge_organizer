@@ -4,3 +4,7 @@ sqlalchemy
 pyzotero
 openai
 python-dotenv
+requests
+psycopg[binary]
+tenacity
+zotero_sync

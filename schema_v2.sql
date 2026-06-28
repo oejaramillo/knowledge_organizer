@@ -502,6 +502,16 @@ CREATE TABLE change_log (
     changed_at     TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- ============================================================
+-- SYNC STATUS
+-- ============================================================
+
+CREATE TABLE sync_state (
+    source TEXT PRIMARY KEY,
+    last_library_version BIGINT,
+    last_sync TIMESTAMPTZ DEFAULT NOW()
+);
+
 
 -- ============================================================
 -- VIEWS
