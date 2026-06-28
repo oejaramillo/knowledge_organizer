@@ -31,7 +31,7 @@ CREATE TABLE contributors (
 CREATE TABLE papers (
     paper_id             UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     title                TEXT NOT NULL,
-    doi                  TEXT UNIQUE,
+    doi                  TEXT,
     zotero_key           TEXT UNIQUE,
     year                 SMALLINT,
     journal              TEXT,
@@ -135,7 +135,7 @@ CREATE TABLE projects (
                               'active','paused','completed','archived'
                           )),
     keywords              TEXT[],
-    zotero_collection_key TEXT,   -- sync anchor back to Zotero
+    zotero_collection_key TEXT UNIQUE,   -- sync anchor back to Zotero
     created_at            TIMESTAMPTZ DEFAULT NOW(),
     updated_at            TIMESTAMPTZ DEFAULT NOW()
 );
