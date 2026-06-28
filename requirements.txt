@@ -1,0 +1,6 @@
+# requirements.txt
+psycopg2-binary
+sqlalchemy
+pyzotero
+openai
+python-dotenv
