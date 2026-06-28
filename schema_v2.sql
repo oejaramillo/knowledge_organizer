@@ -512,6 +512,31 @@ CREATE TABLE sync_state (
     last_sync TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- ============================================================
+-- ATTACHMENTS
+-- ============================================================
+
+CREATE TABLE attachments (
+
+    attachment_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+
+    paper_id UUID
+        REFERENCES papers(paper_id)
+        ON DELETE CASCADE,
+
+    zotero_attachment_key TEXT UNIQUE,
+
+    filename TEXT,
+
+    mime_type TEXT,
+
+    file_path TEXT,
+
+    md5 TEXT,
+
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
 
 -- ============================================================
 -- VIEWS
