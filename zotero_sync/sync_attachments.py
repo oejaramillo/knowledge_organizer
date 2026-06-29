@@ -1,9 +1,19 @@
 from db import get_db_connection
 
 
-def sync_attachments(client):
-    print("Syncing attachments and PDF paths...")
-    attachments = client.get_attachments()
+def sync_attachments(client, since=None, since_date=None):
+    label = (
+        f"(incremental since v{since})" if since is not None
+        else f"(incremental since {since_date})" if since_date is not None
+        else "(full sync)"
+    )
+    print(f"Syncing attachments and PDF paths... {label}")
+
+    attachments = client.get_attachments(since=since, since_date=since_date)
+
+    if not attachments:
+        print("No attachment changes detected.")
+        return
 
     synced_attachments = 0
     updated_pdf_paths = 0
@@ -19,6 +29,24 @@ def sync_attachments(client):
 
                 attachment_key = data.get("key")
                 parent_paper_zotero_key = data.get("parentItem")
+
+                if not attachment_key or not parent_paper_zotero_key:
+                    continue
+
+                cur.execute(
+                    """
+                    SELECT paper_id
+                    FROM papers
+                    WHERE zotero_key = %s
+                    """,
+                    (parent_paper_zotero_key,),
+                )
+                paper_row = cur.fetchone()
+
+                if not paper_row:
+                    continue
+
+                paper_id = paper_row["paper_id"]
                 filename = data.get("filename") or data.get("title")
                 mime_type = data.get("contentType")
                 md5 = data.get("md5")
@@ -29,26 +57,6 @@ def sync_attachments(client):
                     else None
                 )
 
-                if not attachment_key or not parent_paper_zotero_key:
-                    continue
-
-                # Find internal paper_id from Zotero parent paper key
-                cur.execute(
-                    """
-                    SELECT paper_id
-                    FROM papers
-                    WHERE zotero_key = %s
-                    """,
-                    (parent_paper_zotero_key,)
-                )
-                paper_row = cur.fetchone()
-
-                if not paper_row:
-                    continue
-
-                paper_id = paper_row["paper_id"]
-
-                # Upsert attachment row
                 cur.execute(
                     """
                     INSERT INTO attachments (
@@ -75,11 +83,10 @@ def sync_attachments(client):
                         mime_type,
                         file_path,
                         md5,
-                    )
+                    ),
                 )
                 synced_attachments += 1
 
-                # If this is a PDF and we have a real file href, store it in papers.pdf_path too
                 if mime_type == "application/pdf" and file_path:
                     cur.execute(
                         """
@@ -87,7 +94,7 @@ def sync_attachments(client):
                         SET pdf_path = %s
                         WHERE paper_id = %s
                         """,
-                        (file_path, paper_id)
+                        (file_path, paper_id),
                     )
                     updated_pdf_paths += 1
 
