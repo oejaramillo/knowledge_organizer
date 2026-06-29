@@ -8,3 +8,4 @@ requests
 psycopg[binary]
 tenacity
 zotero_sync
+pdfminer.six
