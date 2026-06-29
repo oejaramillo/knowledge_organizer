@@ -4,3 +4,6 @@ zotero_sync/__pycache__
 ai_enrichments/__pycache__
 ai_enrichments/providers/__pycache__
 zotero_sync/__pycache__
+flask_dashboard/api/__pycache__
+flask_dashboard/__pycache__
+flask_dashboard/queries/__pycache__

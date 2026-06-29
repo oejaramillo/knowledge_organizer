@@ -9,3 +9,5 @@ psycopg[binary]
 tenacity
 zotero_sync
 pdfminer.six
+Flask
+flask-cors

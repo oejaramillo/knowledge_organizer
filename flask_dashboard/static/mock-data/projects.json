@@ -1,0 +1,32 @@
+{
+  "data": [
+    {
+      "project_id": "11111111-1111-1111-1111-111111111111",
+      "name": "Economía ecuatoriana",
+      "description": "Macro and labour dynamics of Ecuador.",
+      "status": "active",
+      "keywords": ["ecuador", "macro"],
+      "total_papers": 12, "processed": 4, "read": 5, "unread": 3,
+      "total_claims": 28, "total_annotations": 64
+    },
+    {
+      "project_id": "22222222-2222-2222-2222-222222222222",
+      "name": "Female labor force participation",
+      "description": "Determinants of FLFP in Latin America.",
+      "status": "active",
+      "keywords": ["gender", "labor"],
+      "total_papers": 8, "processed": 2, "read": 3, "unread": 3,
+      "total_claims": 19, "total_annotations": 41
+    },
+    {
+      "project_id": "33333333-3333-3333-3333-333333333333",
+      "name": "IA y mercado laboral",
+      "description": "AI adoption and labour market outcomes.",
+      "status": "paused",
+      "keywords": ["ai", "automation"],
+      "total_papers": 5, "processed": 1, "read": 1, "unread": 3,
+      "total_claims": 7, "total_annotations": 15
+    }
+  ],
+  "pagination": {"page": 1, "per_page": 25, "total": 3, "pages": 1, "has_next": false, "has_prev": false}
+}

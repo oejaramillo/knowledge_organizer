@@ -1,0 +1,16 @@
+{
+  "papers": {
+    "total_papers": 25, "read_papers": 9, "unread_papers": 16,
+    "starred_papers": 4, "processed_papers": 7
+  },
+  "by_status": {"unread": 9, "reading": 4, "read": 5, "processed": 7},
+  "by_document_type": {"journal_article": 18, "book_chapter": 4, "working_paper": 3},
+  "by_year": [
+    {"year": 2018, "count": 3}, {"year": 2019, "count": 5},
+    {"year": 2020, "count": 4}, {"year": 2021, "count": 6},
+    {"year": 2022, "count": 4}, {"year": 2023, "count": 3}
+  ],
+  "claims": {"total": 54, "empirical": 33, "non_empirical": 21},
+  "annotations": 120,
+  "totals": {"projects": 3, "authors": 18, "concepts": 12, "methods": 9, "ideas": 5}
+}

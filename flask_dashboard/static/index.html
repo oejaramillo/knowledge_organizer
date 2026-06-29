@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Research Knowledge Dashboard</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <span class="logo">◆</span>
+      <span class="brand-name">Knowledge Organizer</span>
+    </div>
+    <div class="header-search">
+      <input id="global-search" type="search"
+             placeholder="Search papers, claims, authors, concepts… (Enter)" />
+    </div>
+    <div class="header-actions">
+      <span id="mode-indicator" class="mode-pill live">Live</span>
+      <button id="stats-btn" class="ghost-btn">Stats</button>
+      <button id="mock-btn" class="ghost-btn" title="Toggle mock data">Mock</button>
+      <button id="token-btn" class="ghost-btn" title="Set API token">Token</button>
+      <button id="theme-btn" class="icon-btn" title="Toggle theme">☾</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="sidebar">
+      <ul id="project-list" class="project-list"></ul>
+    </aside>
+
+    <section class="main-list">
+      <div id="paper-list"></div>
+    </section>
+
+    <section class="detail-pane">
+      <div id="detail">
+        <div class="detail-empty">Select a paper to see details.</div>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast-host" class="toast-host"></div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/components/projectList.js"></script>
+  <script src="/js/components/paperList.js"></script>
+  <script src="/js/components/paperDetail.js"></script>
+  <script src="/js/components/dashboardStats.js"></script>
+  <script src="/js/app.js"></script>
+  <script>
+    // Theme toggle (kept tiny + inline so it works before app.js state).
+    (function () {
+      const KEY = "rkm_theme";
+      const root = document.documentElement;
+      const saved = localStorage.getItem(KEY);
+      if (saved) root.setAttribute("data-theme", saved);
+      document.getElementById("theme-btn").addEventListener("click", () => {
+        const next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+        root.setAttribute("data-theme", next);
+        localStorage.setItem(KEY, next);
+      });
+    })();
+  </script>
+</body>
+</html>

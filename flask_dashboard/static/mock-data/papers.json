@@ -1,0 +1,29 @@
+{
+  "data": [
+    {
+      "paper_id": "aaaaaaaa-0000-0000-0000-000000000001",
+      "title": "Minimum Wage and Poverty in Ecuador: A Synthetic Control Approach",
+      "year": 2021, "journal": "Journal of Development Economics",
+      "document_type": "journal_article", "status": "processed",
+      "is_read": true, "star": true,
+      "authors": "Andrade, M., Suárez, L."
+    },
+    {
+      "paper_id": "aaaaaaaa-0000-0000-0000-000000000002",
+      "title": "Female Labor Force Participation and Childcare Access",
+      "year": 2019, "journal": "Labour Economics",
+      "document_type": "journal_article", "status": "read",
+      "is_read": true, "star": false,
+      "authors": "Gómez, P."
+    },
+    {
+      "paper_id": "aaaaaaaa-0000-0000-0000-000000000003",
+      "title": "Automation, AI and the Future of Work in the Global South",
+      "year": 2023, "journal": "World Development",
+      "document_type": "journal_article", "status": "unread",
+      "is_read": false, "star": false,
+      "authors": "Khan, R., Mora, J."
+    }
+  ],
+  "pagination": {"page": 1, "per_page": 25, "total": 3, "pages": 1, "has_next": false, "has_prev": false}
+}
