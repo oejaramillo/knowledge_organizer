@@ -1,6 +1,61 @@
 amb
+amb_no_z
 .env
 zotero_sync/__pycache__
 ai_enrichments/__pycache__
 ai_enrichments/providers/__pycache__
 zotero_sync/__pycache__
+
+# Dependency directories
+node_modules/
+venv/
+env/
+.venv/
+bin/
+lib/
+share/
+
+# Build and distribution
+dist/
+build/
+out/
+*.egg-info/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environment variables and secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.flaskenv
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Logs and databases
+*.log
+*.sqlite3
+*.db
+
+# Testing and coverage
+.coverage
+htmlcov/
+.pytest_cache/
+.eslintcache
+
+# Frontend-specific
+.next/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnp*
+.pnp.js

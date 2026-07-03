@@ -1,11 +1,18 @@
-# requirements.txt
-psycopg2-binary
-sqlalchemy
-pyzotero
-openai
-python-dotenv
-requests
-psycopg[binary]
-tenacity
-zotero_sync
-pdfminer.six
+# Database (Pinned to 1.4 to fix your Base error)
+SQLAlchemy==1.4.46
+psycopg2-binary==2.9.9
+psycopg[binary]==3.1.18
+
+# API/Backend
+fastapi==0.103.2
+uvicorn==0.23.2
+python-dotenv==1.0.0
+requests==2.31.0
+
+# AI and Tools
+openai==0.28.1
+tenacity==8.2.3
+pdfminer.six==20221105
+
+# Modern Zotero (Use this instead of zotero_sync)
+pyzotero==1.5.4
