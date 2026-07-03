@@ -23,4 +23,6 @@ npm install react-router-dom axios lucide-react
 # Install and initialize Tailwind CSS
 npm install -D tailwindcss postcss autoprefixer
 npx tailwindcss init -p
+
+npm run dev
 ```

@@ -1,12 +1,31 @@
-from sqlalchemy import Column, Text, Integer, Boolean, ForeignKey, DateTime, ARRAY
+from sqlalchemy import Column, Text, Integer, Boolean, ForeignKey, DateTime, ARRAY, SmallInteger
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
-from core.database import Base  # ← fix this line
+from core.database import Base
 import uuid
 
 # ==========================================
-# 1. ASSOCIATION TABLE / MODEL
+# 1. CONTRIBUTORS TABLE / MODEL
+# ==========================================
+class Contributor(Base):
+    __tablename__ = "contributors"
+
+    contributor_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(Text, nullable=False)
+    email = Column(Text, unique=True)
+    role = Column(Text)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Project memberships
+    project_associations = relationship(
+        "ProjectContributor",
+        back_populates="contributor",
+        cascade="all, delete-orphan"
+    )
+
+# ==========================================
+# 2. ASSOCIATION TABLE / MODEL
 # ==========================================
 # We use a proper class for the association table because it has 
 # extra columns (project_role, joined_at) beyond just the foreign keys.
@@ -24,7 +43,7 @@ class ProjectContributor(Base):
 
 
 # ==========================================
-# 2. UPDATED PROJECT MODEL
+# 3. UPDATED PROJECT MODEL
 # ==========================================
 class Project(Base):
     __tablename__ = "projects"
@@ -34,7 +53,7 @@ class Project(Base):
     parent_project = Column(UUID(as_uuid=True), ForeignKey("projects.project_id"), nullable=True)
     description = Column(Text, nullable=True)
     status = Column(Text, default="active")
-    project_type = Column(Text, default="collection")
+    project_type = Column("type",Text, default="collection")
     keywords = Column(ARRAY(Text), nullable=True)
     zotero_collection_key = Column(Text, unique=True, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -55,7 +74,7 @@ class Project(Base):
 
 
 # ==========================================
-# 3. NEW FEATURE MODELS
+# 4. NEW FEATURE MODELS
 # ==========================================
 class ProjectTask(Base):
     __tablename__ = "project_tasks"
@@ -126,12 +145,13 @@ class PaperProject(Base):
     
     relevance_note = Column(Text, nullable=True)
     citation_intent = Column(Text, nullable=True)
-    added_by = Column(UUID(as_uuid=True), ForeignKey("contributors.contributor_id"), nullable=True)
+    added_by = Column(UUID(as_uuid=True), ForeignKey("contributors.contributor_id"), nullable=True)  # ← only once
     added_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
-    paper = relationship("Paper", back_populates="project_associations")
-    project = relationship("Project", back_populates="paper_associations") # Add this to Project model later!
+    paper = relationship("Paper", back_populates="project_associations")       # ← points to Paper
+    project = relationship("Project", back_populates="paper_associations")     # ← matches Project model
+    contributor = relationship("Contributor")                                   # ← no back_populates needed
 
 
 # ==========================================
@@ -144,7 +164,7 @@ class Paper(Base):
     title = Column(Text, nullable=False)
     doi = Column(Text, nullable=True)
     zotero_key = Column(Text, unique=True, nullable=True)
-    year = Column(Integer, nullable=True) 
+    year = Column(SmallInteger)
     journal = Column(Text, nullable=True)
     volume = Column(Text, nullable=True)
     issue = Column(Text, nullable=True)

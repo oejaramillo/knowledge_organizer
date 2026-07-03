@@ -14,13 +14,20 @@ from core.config import settings
 
 app = FastAPI(title=settings.PROJECT_TITLE)
 
-# Set up CORS so the React frontend (running on port 5173 usually) can communicate with this API
+# ── CORS CONFIGURATION ──
+# List the origins that are allowed to make requests to your API
+origins = [
+    "http://localhost:5173",  # Vite default port
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",  # Common React port
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, change this to your actual frontend domain
+    allow_origins=origins,            # Allows specific origins
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],              # Allows all methods (GET, POST, etc.)
+    allow_headers=["*"],              # Allows all headers
 )
 
 @app.get("/")
