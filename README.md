@@ -26,3 +26,170 @@ npx tailwindcss init -p
 
 npm run dev
 ```
+
+
+Great question. Let me explain the mental model clearly.
+
+---
+
+## The 4 layers of a React app
+
+```
+main.jsx          ← boots the app, nothing else
+App.jsx           ← defines ALL routes (the map of the app)
+layouts/          ← the shell (sidebar, navbar) that wraps pages
+pages/            ← one file per "screen"
+components/       ← reusable building blocks used inside pages
+```
+
+---
+
+### `main.jsx` — the ignition key
+
+```jsx
+ReactDOM.createRoot(...).render(<App />)
+```
+
+You never touch this. It just starts React and mounts `App`. One job, done.
+
+---
+
+### `App.jsx` — the map
+
+This is where you declare every URL and what it renders:
+
+```jsx
+<Routes>
+  <Route path="/" element={<MainLayout />}>        // shell
+    <Route index element={<ProjectsPage />} />      // → localhost:5173/
+    <Route path="projects/:id" element={<ProjectDetail />} />  // → localhost:5173/projects/123
+    <Route path="library" element={<LibraryPage />} />         // → localhost:5173/library
+  </Route>
+</Routes>
+```
+
+**There is no "homepage" file.** The homepage is whichever page component is assigned to `index` in `App.jsx`.
+
+---
+
+### `layouts/` — the persistent shell
+
+`MainLayout.jsx` renders the sidebar + navbar **once**, and the `<Outlet />` is the hole where the current page gets injected:
+
+```
+┌─────────────────────────────────────┐
+│  Sidebar  │   <Outlet />            │
+│           │   (ProjectsPage,        │
+│           │    ProjectDetail, etc.) │
+└─────────────────────────────────────┘
+```
+
+The sidebar never re-renders. Only the `<Outlet />` changes when you navigate.
+
+---
+
+### `pages/` — one screen = one file
+
+A page is just a component that assembles other components. It owns the data fetching for that screen:
+
+```jsx
+// pages/ProjectsPage.jsx
+export default function ProjectsPage() {
+    const [projects] = useFetch('/projects/');   // fetch here
+    return <ProjectList projects={projects} />;   // pass down
+}
+```
+
+---
+
+### `components/` — reusable bricks
+
+Components don't fetch data. They receive props and render UI:
+
+```jsx
+// components/projects/ProjectCard.jsx
+export default function ProjectCard({ project }) {
+    return <div>{project.name}</div>;   // just renders
+}
+```
+
+---
+
+## The incremental workflow
+
+Every new feature follows the same 4 steps:
+
+```
+1. Add the route in App.jsx
+2. Create the page in pages/
+3. Build the components it needs in components/
+4. Wire the API call in the page
+```
+
+### Example: "Projects grouped by type with tasks and papers"
+
+**Step 1 — Route already exists**, or add one:
+```jsx
+// App.jsx
+<Route path="projects/:id" element={<ProjectDetailPage />} />
+```
+
+**Step 2 — Create the page:**
+```jsx
+// pages/ProjectDetailPage.jsx
+export default function ProjectDetailPage() {
+    const { id } = useParams();
+    const [project, setProject] = useState(null);
+
+    useEffect(() => {
+        apiClient.get(`/projects/${id}`).then(r => setProject(r.data));
+    }, [id]);
+
+    return (
+        <>
+            <TaskList tasks={project.tasks} />
+            <PaperList papers={project.papers} />
+        </>
+    );
+}
+```
+
+**Step 3 — Build the components:**
+```
+components/
+  tasks/
+    TaskList.jsx      ← renders a list
+    TaskCard.jsx      ← renders one task
+  papers/
+    PaperList.jsx
+    PaperCard.jsx
+```
+
+**Step 4 — Each component just receives props:**
+```jsx
+// components/tasks/TaskList.jsx
+export default function TaskList({ tasks }) {
+    return tasks.map(t => <TaskCard key={t.task_id} task={t} />);
+}
+```
+
+---
+
+## The golden rules
+
+| Rule | Why |
+|---|---|
+| **Pages fetch, components render** | Components stay reusable |
+| **One route = one page file** | Easy to find what renders where |
+| **`App.jsx` is the source of truth for navigation** | You always know what URL maps to what |
+| **Layout wraps everything** | Sidebar/navbar renders once, not per page |
+
+---
+
+So your next steps concretely would be:
+
+1. `ProjectsPage` → shows `ProjectList` (grouped by status/type) ✅ you have this
+2. `ProjectDetailPage` → shows tasks + papers for one project → **build next**
+3. `LibraryPage` → shows all papers across projects → **after that**
+
+Want me to scaffold `ProjectDetailPage` with `TaskList` and `PaperList` as the next step?

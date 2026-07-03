@@ -1,8 +1,101 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+:root {
+  --bg-main: #f8fafc;
+  --bg-white: #ffffff;
+  --text-main: #1e293b;
+  --text-muted: #64748b;
+  --border-color: #e2e8f0;
+  --accent-blue: #3b82f6;
+  --accent-bg: #eff6ff;
+}
 
-/* We'll add a tiny custom style to make the background a nice dashboard gray */
 body {
-  background-color: #f8fafc; /* Tailwind's slate-50 */
+  margin: 0;
+  font-family: 'Inter', -apple-system, sans-serif;
+  background-color: var(--bg-main);
+  color: var(--text-main);
+}
+
+/* --- SIDEBAR LIST (Vertical) --- */
+.project-sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 14px;
+  color: var(--text-muted);
+  transition: background 0.2s;
+}
+
+.nav-item:hover {
+  background-color: #f1f5f9;
+}
+
+/* Active state for the clicked project */
+.nav-item.active {
+  background-color: var(--accent-bg);
+  color: var(--accent-blue);
+  font-weight: 600;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+/* --- PROJECT DETAIL (Main pane) --- */
+.detail-container {
+  padding: 40px;
+  max-width: 900px;
+}
+
+.detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.detail-header h2 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.grid-sections {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.section-card {
+  background: var(--bg-white);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.section-card h3 {
+  margin-top: 0;
+  font-size: 16px;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+}
+
+.item-row {
+  list-style: none;
+  padding: 10px 0;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 14px;
 }
