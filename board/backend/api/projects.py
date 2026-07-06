@@ -4,9 +4,10 @@ from typing import List
 from uuid import UUID
 
 from core.database import get_db
-from models.core import Project, ProjectContributor
-# Import the new schemas we just created
-from schemas.core import ProjectCreate, ProjectResponse, ProjectDetailedResponse
+
+from models.core import Project, ProjectContributor, Contributor
+
+from schemas.core import ProjectCreate, ProjectResponse, ProjectDetailedResponse, ProjectContributorCreate, ProjectContributorResponse
 
 
 router = APIRouter(
@@ -60,3 +61,39 @@ def create_project(project_in: ProjectCreate, db: Session = Depends(get_db)):
     db.refresh(new_project)
     
     return new_project
+
+@router.post("/{project_id}/contributors", response_model=ProjectContributorResponse, status_code=201)
+def add_contributor_to_project(
+    project_id: UUID,
+    payload: ProjectContributorCreate,
+    db: Session = Depends(get_db),
+):
+    # Verify project exists
+    project = db.query(Project).filter(Project.project_id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    # Verify contributor exists
+    contributor = db.query(Contributor).filter(
+        Contributor.contributor_id == payload.contributor_id
+    ).first()
+    if not contributor:
+        raise HTTPException(status_code=404, detail="Contributor not found")
+
+    # Check not already linked
+    existing = db.query(ProjectContributor).filter_by(
+        project_id=project_id,
+        contributor_id=payload.contributor_id,
+    ).first()
+    if existing:
+        raise HTTPException(status_code=409, detail="Contributor already in project")
+
+    link = ProjectContributor(
+        project_id=project_id,
+        contributor_id=payload.contributor_id,
+        project_role=payload.project_role,
+    )
+    db.add(link)
+    db.commit()
+    db.refresh(link)
+    return link
