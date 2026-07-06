@@ -37,8 +37,7 @@ def sync_projects(client, since=None, since_date=None):
                     """,
                     (
                         data.get("key"),
-                        data.get("name"),
-                        f"Synced from Zotero collection: {data.get('name')}",
+                        data.get("name")
                     ),
                 )
 

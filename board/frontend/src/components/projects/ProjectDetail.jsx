@@ -1,5 +1,3 @@
-// frontend/src/components/projects/ProjectDetail.jsx
-
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import apiClient from '../../api/client';

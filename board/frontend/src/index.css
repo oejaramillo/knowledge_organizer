@@ -99,3 +99,167 @@ body {
   border-bottom: 1px solid #f1f5f9;
   font-size: 14px;
 }
+
+/* Fix root so MainLayout's flex row works */
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+#root {
+  height: 100%;
+  display: flex;
+  flex-direction: row;
+}
+
+/* --- PROJECT DETAIL --- */
+.project-detail {
+  padding: 32px 40px;
+  max-width: 900px;
+}
+
+.project-detail__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.project-detail__header h2 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.project-detail__description {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin-top: 6px;
+}
+
+.project-detail__keywords {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.keyword-tag {
+  background: var(--accent-bg);
+  color: var(--accent-blue);
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-weight: 500;
+}
+
+.project-detail__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.detail-section {
+  background: var(--bg-white);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.detail-section--full {
+  grid-column: 1 / -1;  /* spans both columns */
+}
+
+.detail-section h3 {
+  margin-top: 0;
+  font-size: 15px;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 10px;
+  margin-bottom: 14px;
+}
+
+.empty-state {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* Status badges */
+.status-badge {
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+.status-badge--active   { background: #dcfce7; color: #16a34a; }
+.status-badge--paused   { background: #fef9c3; color: #ca8a04; }
+.status-badge--completed{ background: #dbeafe; color: #2563eb; }
+.status-badge--archived { background: #f1f5f9; color: #64748b; }
+
+/* Tasks */
+.task-list, .meeting-list, .binnacle-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.task-item, .meeting-item, .binnacle-item {
+  font-size: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.task-item__header, .meeting-item__header, .binnacle-item__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.priority-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.priority-dot--high   { background: #ef4444; }
+.priority-dot--medium { background: #f59e0b; }
+.priority-dot--low    { background: #22c55e; }
+
+.task-item__description, .task-item__due,
+.meeting-item__summary, .meeting-item__date,
+.binnacle-item__content {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin: 2px 0 0 16px;
+}
+
+.binnacle-item__links {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.link-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.link-badge--task    { background: #ede9fe; color: #7c3aed; }
+.link-badge--meeting { background: #fce7f3; color: #db2777; }
+
+/* Ensure MainLayout fills the full root */
+.flex {
+  width: 25%;
+}
+
+/* Force the app shell to fill and split correctly */
+#root > * {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: row;
+}
