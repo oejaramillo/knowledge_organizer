@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.orm import Session
-from api import meetings, papers, projects, tasks, binnacle
+from api import meetings, papers, projects, tasks, binnacle, contributors
 from core.database import get_db
 from core.config import settings
 
@@ -52,3 +52,4 @@ app.include_router(tasks.router)
 app.include_router(papers.router)
 app.include_router(meetings.router)
 app.include_router(binnacle.router)
+app.include_router(contributors.router)

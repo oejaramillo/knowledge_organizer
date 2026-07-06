@@ -4,7 +4,13 @@ from typing import List
 from uuid import UUID
 
 from core.database import get_db
-from models.core import ProjectBinnacle, Project, ProjectTask, ProjectMeeting
+from models.core import (
+    ProjectBinnacle,
+    Project,
+    ProjectTask,
+    ProjectMeeting,
+    Contributor,
+)
 from schemas.core import BinnacleCreate, BinnacleResponse
 
 router = APIRouter(
@@ -33,6 +39,19 @@ def create_binnacle_entry(binnacle_in: BinnacleCreate, db: Session = Depends(get
         meeting = db.query(ProjectMeeting).filter(ProjectMeeting.meeting_id == binnacle_in.meeting_id).first()
         if not meeting:
             raise HTTPException(status_code=404, detail="Linked meeting not found")
+        
+    if binnacle_in.author_id:
+        author = (
+            db.query(Contributor)
+            .filter(Contributor.contributor_id == binnacle_in.author_id)
+            .first()
+        )
+
+        if not author:
+            raise HTTPException(
+                status_code=404,
+                detail="Author not found"
+            )
 
     new_entry = ProjectBinnacle(**binnacle_in.model_dump())
     db.add(new_entry)

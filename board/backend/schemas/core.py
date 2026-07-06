@@ -1,8 +1,49 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional, List
 from uuid import UUID
 from datetime import datetime
 
+
+# ==========================================
+# CONTRIBUTORS
+# ==========================================
+class ContributorBase(BaseModel):
+    name: str
+    email: Optional[str] = None
+    role: Optional[str] = None
+    country: Optional[str] = None
+    site: Optional[str] = None
+
+
+class ContributorCreate(ContributorBase):
+    pass
+
+
+class ContributorResponse(ContributorBase):
+    contributor_id: UUID
+    created_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+# ==========================================
+# PROJECT CONTRIBUTORS
+# ==========================================
+class ProjectContributorBase(BaseModel):
+    contributor_id: UUID
+    project_role: Optional[str] = None
+
+
+class ProjectContributorCreate(ProjectContributorBase):
+    pass
+
+
+class ProjectContributorResponse(ProjectContributorBase):
+    project_id: UUID
+    joined_at: Optional[datetime] = None
+
+    contributor: Optional[ContributorResponse] = None
+
+    model_config = ConfigDict(from_attributes=True)
 
 # ==========================================
 # 1. TASKS
@@ -24,6 +65,8 @@ class TaskResponse(TaskBase):
     task_id: UUID
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+
+    assignee: Optional[ContributorResponse] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -69,6 +112,8 @@ class BinnacleResponse(BinnacleBase):
     entry_date: Optional[datetime] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+
+    author: Optional[ContributorResponse] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -141,10 +186,9 @@ class ProjectResponse(ProjectBase):
 # This one pulls everything together! When you hit your frontend API, 
 # returning this model will give you the project AND all its activities.
 class ProjectDetailedResponse(ProjectResponse):
-    tasks: List[TaskResponse] = []
-    meetings: List[MeetingResponse] = []
-    binnacle_entries: List[BinnacleResponse] = []
-    # If eventually keeping track of papers in this view:
-    # papers: List[PaperResponse] = []
-    
+    tasks: List[TaskResponse] = Field(default_factory=list)
+    meetings: List[MeetingResponse] = Field(default_factory=list)
+    binnacle_entries: List[BinnacleResponse] = Field(default_factory=list)
+    project_contributors: List[ProjectContributorResponse] = Field(default_factory=list)
+
     model_config = ConfigDict(from_attributes=True)

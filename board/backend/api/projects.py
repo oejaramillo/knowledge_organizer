@@ -4,9 +4,10 @@ from typing import List
 from uuid import UUID
 
 from core.database import get_db
-from models.core import Project
+from models.core import Project, ProjectContributor
 # Import the new schemas we just created
 from schemas.core import ProjectCreate, ProjectResponse, ProjectDetailedResponse
+
 
 router = APIRouter(
     prefix="/api/projects",
@@ -33,12 +34,14 @@ def get_project(project_id: UUID, db: Session = Depends(get_db)):
         .options(
             selectinload(Project.tasks),
             selectinload(Project.meetings),
-            selectinload(Project.binnacle_entries)
+            selectinload(Project.binnacle_entries),
+            selectinload(Project.project_contributors)
+                .selectinload(ProjectContributor.contributor)
         )
         .filter(Project.project_id == project_id)
         .first()
     )
-    
+        
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
         

@@ -4,8 +4,9 @@ from typing import List
 from uuid import UUID
 
 from core.database import get_db
-from models.core import ProjectTask, Project
+from models.core import ProjectTask, Project, Contributor
 from schemas.core import TaskCreate, TaskResponse
+
 
 router = APIRouter(
     prefix="/api/tasks",
@@ -21,6 +22,19 @@ def create_task(task_in: TaskCreate, db: Session = Depends(get_db)):
     project = db.query(Project).filter(Project.project_id == task_in.project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
+    
+    if task_in.assigned_to:
+        contributor = (
+            db.query(Contributor)
+            .filter(Contributor.contributor_id == task_in.assigned_to)
+            .first()
+        )
+
+        if not contributor:
+            raise HTTPException(
+                status_code=404,
+                detail="Contributor not found"
+            )
 
     new_task = ProjectTask(**task_in.model_dump())
     db.add(new_task)
