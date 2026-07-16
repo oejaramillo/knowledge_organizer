@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
+import IdeaList from "../ideas/IdeaList";
 
 const API = "http://localhost:8000";
 
@@ -10,6 +11,11 @@ export default function ProjectDetail() {
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const [activeSection, setActiveSection] = useState(null);
+
+  const openSection = (section) => {
+    setActiveSection((prev) => (prev === section ? null : section));
+  };
 
   // Form state
   const [form, setForm] = useState({ name: "", email: "", site: "", project_role: "" });
@@ -328,6 +334,32 @@ export default function ProjectDetail() {
             })}
           </ul>
         )}
+
+        {/* Project action buttons */}
+        <div className="project-actions" role="group" aria-label="Project actions">
+          {['ideas', 'meetings', 'binnacle', 'papers', 'tasks'].map((section) => (
+            <button
+              key={section}
+              type="button"
+              className={`action-btn${activeSection === section ? ' action-btn--active' : ''}`}
+              onClick={() => openSection(section)}
+              aria-label={`Open ${section}`}
+            >
+              {section.charAt(0).toUpperCase() + section.slice(1)}
+            </button>
+          ))}
+        </div>
+
+        {/* Section panel */}
+        {activeSection === 'ideas' && (
+          <IdeaList
+            ideas={project.ideas ?? []}
+            projectId={project.project_id}
+            onIdeaAdded={fetchProject}
+          />
+        )}
+
+
       </div>
     </div>
   );

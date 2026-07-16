@@ -2,6 +2,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional, List
 from uuid import UUID
 from datetime import datetime
+from datetime import datetime
 
 
 # ==========================================
@@ -179,9 +180,38 @@ class ProjectResponse(ProjectBase):
     
     model_config = ConfigDict(from_attributes=True)
 
+# ==========================================
+# 6. IDEAS
+# ==========================================
+class IdeaCreate(BaseModel):
+    project_id:     Optional[UUID] = None
+    title:          str
+    description:    Optional[str] = None
+    status:         Optional[str] = "raw"   # raw | developing | testable | abandoned | published
+    contributor_id: Optional[UUID] = None
+
+class IdeaUpdate(BaseModel):
+    title:          Optional[str] = None
+    description:    Optional[str] = None
+    status:         Optional[str] = None
+    contributor_id: Optional[UUID] = None
+
+class IdeaResponse(BaseModel):
+    idea_id:        UUID
+    project_id:     Optional[UUID]
+    title:          str
+    description:    Optional[str]
+    status:         Optional[str]
+    contributor_id: Optional[UUID]
+    created_at:     Optional[datetime]
+    updated_at:     Optional[datetime]
+
+    class Config:
+        from_attributes = True
+
 
 # ==========================================
-# 6. AGGREGATE DASHBOARD SCHEMAS
+# 7. AGGREGATE DASHBOARD SCHEMAS
 # ==========================================
 # This one pulls everything together! When you hit your frontend API, 
 # returning this model will give you the project AND all its activities.
@@ -190,5 +220,6 @@ class ProjectDetailedResponse(ProjectResponse):
     meetings: List[MeetingResponse] = Field(default_factory=list)
     binnacle_entries: List[BinnacleResponse] = Field(default_factory=list)
     project_contributors: List[ProjectContributorResponse] = Field(default_factory=list)
+    ideas: List[IdeaResponse] = []
 
     model_config = ConfigDict(from_attributes=True)

@@ -36,6 +36,7 @@ def get_project(project_id: UUID, db: Session = Depends(get_db)):
             selectinload(Project.tasks),
             selectinload(Project.meetings),
             selectinload(Project.binnacle_entries),
+            selectinload(Project.ideas),
             selectinload(Project.project_contributors)
                 .selectinload(ProjectContributor.contributor)
         )

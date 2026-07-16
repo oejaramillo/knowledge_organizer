@@ -65,7 +65,7 @@ class Project(Base):
     binnacle_entries = relationship("ProjectBinnacle", back_populates="project", cascade="all, delete-orphan")
     project_contributors = relationship("ProjectContributor", back_populates="project", cascade="all, delete-orphan")
     paper_associations = relationship("PaperProject", back_populates="project", cascade="all, delete-orphan")
-
+    ideas = relationship("Idea", back_populates="project", cascade="all, delete-orphan")
 
 # ==========================================
 # 4. FEATURE MODELS
@@ -119,8 +119,7 @@ class ProjectBinnacle(Base):
     project = relationship("Project", back_populates="binnacle_entries")
     task = relationship("ProjectTask")
     meeting = relationship("ProjectMeeting")
-    author = relationship("Contributor")  # ← uncommented
-
+    author = relationship("Contributor")
 
 # ==========================================
 # ASSOCIATION MODEL: PAPER <-> PROJECT
@@ -174,3 +173,22 @@ class Paper(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     project_associations = relationship("PaperProject", back_populates="paper", cascade="all, delete-orphan")
+
+
+# ==========================================
+# IDEAS MODEL
+# ==========================================
+class Idea(Base):
+    __tablename__ = "ideas"
+
+    idea_id        = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    project_id     = Column(UUID(as_uuid=True), ForeignKey("projects.project_id", ondelete="CASCADE"), nullable=True)
+    title          = Column(Text, nullable=False)
+    description    = Column(Text, nullable=True)
+    status         = Column(Text, default="raw")   # raw | developing | testable | abandoned | published
+    contributor_id = Column(UUID(as_uuid=True), ForeignKey("contributors.contributor_id", ondelete="SET NULL"), nullable=True)
+    created_at     = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at     = Column(DateTime(timezone=True), onupdate=func.now())
+
+    project     = relationship("Project", back_populates="ideas")
+    contributor = relationship("Contributor")

@@ -263,3 +263,70 @@ html, body {
   display: flex;
   flex-direction: row;
 }
+
+
+/* Project action buttons (insert into index.css) */
+.project-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 16px;
+  flex-wrap: wrap; /* allow wrapping on small screens */
+}
+
+.action-btn {
+  appearance: none;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-main);
+  padding: 6px 10px;
+  font-size: 13px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+}
+
+/* subtle hover / focus */
+.action-btn:hover,
+.action-btn:focus {
+  background: var(--accent-bg);
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+  transform: translateY(-1px);
+  outline: none;
+  box-shadow: 0 4px 10px rgba(59,130,246,0.08);
+}
+
+/* small visual variants if you want a solid primary button */
+.action-btn--solid {
+  background: var(--accent-blue);
+  color: white;
+  border-color: var(--accent-blue);
+}
+.action-btn--solid:hover {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+}
+
+/* optional tiny icon placeholder inside button */
+.action-btn .btn-icon {
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+}
+
+/* responsive: stack on very small screens */
+@media (max-width: 480px) {
+  .project-actions {
+    gap: 8px;
+  }
+  .action-btn {
+    padding: 8px 12px;
+    font-size: 14px;
+    min-width: 120px;
+  }
+}
