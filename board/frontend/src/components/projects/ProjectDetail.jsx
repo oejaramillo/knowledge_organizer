@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import IdeaList from "../ideas/IdeaList";
+import MeetingList from "../meetings/MeetingList";
 
 const API = "http://localhost:8000";
 
@@ -356,6 +357,15 @@ export default function ProjectDetail() {
             ideas={project.ideas ?? []}
             projectId={project.project_id}
             onIdeaAdded={fetchProject}
+          />
+        )}
+
+        {activeSection === "meetings" && (
+          <MeetingList
+            meetings={project.meetings}
+            projectId={project.project_id}
+            fetchProject={fetchProject}
+            projectContributors={project.project_contributors}
           />
         )}
 

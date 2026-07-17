@@ -83,12 +83,13 @@ class MeetingBase(BaseModel):
     project_id: UUID
 
 class MeetingCreate(MeetingBase):
-    pass
+    participant_ids: List[UUID] = []
 
 class MeetingResponse(MeetingBase):
     meeting_id: UUID
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    participants: List[ContributorResponse] = []
 
     model_config = ConfigDict(from_attributes=True)
 

@@ -1,9 +1,19 @@
-from sqlalchemy import Column, Text, Integer, Boolean, ForeignKey, DateTime, ARRAY, SmallInteger
+from sqlalchemy import Column, Text, Integer, Boolean, ForeignKey, DateTime, ARRAY, SmallInteger, Table
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from core.database import Base
 import uuid
+
+# ==========================================
+# ASSOCIATION TABLES (module level)
+# ==========================================
+meeting_participants = Table(
+    "meeting_participants",
+    Base.metadata,
+    Column("meeting_id", UUID(as_uuid=True), ForeignKey("project_meetings.meeting_id", ondelete="CASCADE"), primary_key=True),
+    Column("contributor_id", UUID(as_uuid=True), ForeignKey("contributors.contributor_id", ondelete="CASCADE"), primary_key=True),
+)
 
 # ==========================================
 # 1. CONTRIBUTORS TABLE / MODEL
@@ -15,8 +25,8 @@ class Contributor(Base):
     name = Column(Text, nullable=False)
     email = Column(Text, unique=True)
     role = Column(Text)
-    country = Column(Text, nullable=True)   # ← added
-    site = Column(Text, nullable=True)      # ← added
+    country = Column(Text, nullable=True)
+    site = Column(Text, nullable=True)      
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Project memberships
@@ -87,7 +97,6 @@ class ProjectTask(Base):
     project = relationship("Project", back_populates="tasks")
     assignee = relationship("Contributor")  # ← uncommented
 
-
 class ProjectMeeting(Base):
     __tablename__ = "project_meetings"
 
@@ -100,7 +109,7 @@ class ProjectMeeting(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     project = relationship("Project", back_populates="meetings")
-
+    participants = relationship("Contributor", secondary=meeting_participants, lazy="selectin")
 
 class ProjectBinnacle(Base):
     __tablename__ = "project_binnacle"
