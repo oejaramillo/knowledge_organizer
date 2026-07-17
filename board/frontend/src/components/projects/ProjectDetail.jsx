@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import IdeaList from "../ideas/IdeaList";
 import MeetingList from "../meetings/MeetingList";
+import BinnacleList from "../binnacle/BinnacleList";
 
 const API = "http://localhost:8000";
 
@@ -352,6 +353,7 @@ export default function ProjectDetail() {
         </div>
 
         {/* Section panel */}
+        {/* Ideas */}
         {activeSection === 'ideas' && (
           <IdeaList
             ideas={project.ideas ?? []}
@@ -360,12 +362,25 @@ export default function ProjectDetail() {
           />
         )}
 
+        {/* Meetings */}
         {activeSection === "meetings" && (
           <MeetingList
             meetings={project.meetings}
             projectId={project.project_id}
             fetchProject={fetchProject}
             projectContributors={project.project_contributors}
+          />
+        )}
+
+        {/* Binnacle */}
+        {activeSection === "binnacle" && (
+          <BinnacleList
+            binnacleEntries={project.binnacle_entries}
+            projectId={project.project_id}
+            fetchProject={fetchProject}
+            projectContributors={project.project_contributors}
+            meetings={project.meetings}
+            tasks={project.tasks}
           />
         )}
 

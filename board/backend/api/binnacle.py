@@ -11,12 +11,23 @@ from models.core import (
     ProjectMeeting,
     Contributor,
 )
-from schemas.core import BinnacleCreate, BinnacleResponse
+from schemas.core import BinnacleCreate, BinnacleResponse, BinnacleUpdate
 
 router = APIRouter(
     prefix="/api/binnacle",
     tags=["Binnacle"]
 )
+
+@router.put("/{binnacle_id}", response_model=BinnacleResponse)
+def update_binnacle_entry(binnacle_id: UUID, updates: BinnacleUpdate, db: Session = Depends(get_db)):
+    entry = db.query(ProjectBinnacle).filter(ProjectBinnacle.binnacle_id == binnacle_id).first()
+    if not entry:
+        raise HTTPException(status_code=404, detail="Binnacle entry not found")
+    for field, value in updates.model_dump(exclude_unset=True).items():
+        setattr(entry, field, value)
+    db.commit()
+    db.refresh(entry)
+    return entry
 
 @router.post("/", response_model=BinnacleResponse, status_code=201)
 def create_binnacle_entry(binnacle_in: BinnacleCreate, db: Session = Depends(get_db)):

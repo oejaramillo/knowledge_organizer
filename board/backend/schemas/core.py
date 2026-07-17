@@ -116,8 +116,18 @@ class BinnacleResponse(BinnacleBase):
     updated_at: Optional[datetime] = None
 
     author: Optional[ContributorResponse] = None
+    task: Optional[TaskResponse] = None        
+    meeting: Optional[MeetingResponse] = None  
 
     model_config = ConfigDict(from_attributes=True)
+
+class BinnacleUpdate(BaseModel):
+    title: Optional[str] = None
+    content: Optional[str] = None
+    entry_date: Optional[datetime] = None
+    task_id: Optional[UUID] = None
+    meeting_id: Optional[UUID] = None
+    author_id: Optional[UUID] = None
 
 
 # ==========================================

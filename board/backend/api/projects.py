@@ -5,9 +5,20 @@ from uuid import UUID
 
 from core.database import get_db
 
-from models.core import Project, ProjectContributor, Contributor
+from models.core import (
+    Project, 
+    ProjectContributor, 
+    Contributor,
+    ProjectBinnacle
+)
 
-from schemas.core import ProjectCreate, ProjectResponse, ProjectDetailedResponse, ProjectContributorCreate, ProjectContributorResponse
+from schemas.core import (
+    ProjectCreate, 
+    ProjectResponse, 
+    ProjectDetailedResponse, 
+    ProjectContributorCreate, 
+    ProjectContributorResponse
+)
 
 
 router = APIRouter(
@@ -33,9 +44,11 @@ def get_project(project_id: UUID, db: Session = Depends(get_db)):
     project = (
         db.query(Project)
         .options(
+            selectinload(Project.binnacle_entries).selectinload(ProjectBinnacle.author),
+            selectinload(Project.binnacle_entries).selectinload(ProjectBinnacle.task),
+            selectinload(Project.binnacle_entries).selectinload(ProjectBinnacle.meeting),
             selectinload(Project.tasks),
             selectinload(Project.meetings),
-            selectinload(Project.binnacle_entries),
             selectinload(Project.ideas),
             selectinload(Project.project_contributors)
                 .selectinload(ProjectContributor.contributor)
