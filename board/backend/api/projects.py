@@ -9,7 +9,9 @@ from models.core import (
     Project, 
     ProjectContributor, 
     Contributor,
-    ProjectBinnacle
+    ProjectBinnacle,
+    PaperProject,
+    Paper
 )
 
 from schemas.core import (
@@ -51,7 +53,10 @@ def get_project(project_id: UUID, db: Session = Depends(get_db)):
             selectinload(Project.meetings),
             selectinload(Project.ideas),
             selectinload(Project.project_contributors)
-                .selectinload(ProjectContributor.contributor)
+                .selectinload(ProjectContributor.contributor),
+            selectinload(Project.paper_associations)
+                .selectinload(PaperProject.paper)
+                .selectinload(Paper.authors),   # ← new
         )
         .filter(Project.project_id == project_id)
         .first()

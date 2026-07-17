@@ -1,4 +1,15 @@
-from sqlalchemy import Column, Text, Integer, Boolean, ForeignKey, DateTime, ARRAY, SmallInteger, Table
+from sqlalchemy import (
+    Column,
+    Text, 
+    Integer, 
+    Boolean, 
+    ForeignKey, 
+    DateTime, 
+    ARRAY, 
+    SmallInteger, 
+    Table,
+    Float
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
@@ -13,6 +24,14 @@ meeting_participants = Table(
     Base.metadata,
     Column("meeting_id", UUID(as_uuid=True), ForeignKey("project_meetings.meeting_id", ondelete="CASCADE"), primary_key=True),
     Column("contributor_id", UUID(as_uuid=True), ForeignKey("contributors.contributor_id", ondelete="CASCADE"), primary_key=True),
+)
+
+paper_authors_table = Table(
+    "paper_authors",
+    Base.metadata,
+    Column("paper_id", UUID(as_uuid=True), ForeignKey("papers.paper_id", ondelete="CASCADE"), primary_key=True),
+    Column("author_id", UUID(as_uuid=True), ForeignKey("authors.author_id", ondelete="CASCADE"), primary_key=True),
+    Column("position", SmallInteger, nullable=False, default=1),
 )
 
 # ==========================================
@@ -149,6 +168,22 @@ class PaperProject(Base):
 
 
 # ==========================================
+# AUTHORS MODEL
+# ==========================================
+class Author(Base):
+    __tablename__ = "authors"
+
+    author_id   = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    full_name   = Column(Text, nullable=False)
+    last_name   = Column(Text, nullable=True)
+    first_name  = Column(Text, nullable=True)
+    institution = Column(Text, nullable=True)
+    country     = Column(Text, nullable=True)
+    orcid       = Column(Text, unique=True, nullable=True)
+    created_at  = Column(DateTime(timezone=True), server_default=func.now())
+
+
+# ==========================================
 # PAPER MODEL
 # ==========================================
 class Paper(Base):
@@ -167,6 +202,8 @@ class Paper(Base):
     language = Column(Text, default="en")
     pdf_path = Column(Text, nullable=True)
     url = Column(Text, nullable=True)
+    star  = Column(Boolean, default=False)
+    notes = Column(Text, nullable=True)
 
     document_type = Column(Text, default="journal_article")
     discipline = Column(ARRAY(Text), nullable=True)
@@ -181,7 +218,30 @@ class Paper(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-    project_associations = relationship("PaperProject", back_populates="paper", cascade="all, delete-orphan")
+    project_associations = relationship(
+        "PaperProject", 
+        back_populates="paper", 
+        cascade="all, delete-orphan"
+    )
+
+    authors = relationship(
+        "Author",
+        secondary=paper_authors_table,
+        order_by=paper_authors_table.c.position,
+        lazy="selectin"
+    )
+
+    claims = relationship(
+        "Claim", 
+        back_populates="paper", 
+        cascade="all, delete-orphan"
+    )
+
+    annotations = relationship(
+        "Annotation", 
+        back_populates="paper", 
+        cascade="all, delete-orphan"
+    )
 
 
 # ==========================================
@@ -200,4 +260,64 @@ class Idea(Base):
     updated_at     = Column(DateTime(timezone=True), onupdate=func.now())
 
     project     = relationship("Project", back_populates="ideas")
+    contributor = relationship("Contributor")
+
+
+# ==========================================
+# CLAIMS MODEL
+# ==========================================
+class Claim(Base):
+    __tablename__ = "claims"
+
+    claim_id         = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    paper_id         = Column(UUID(as_uuid=True), ForeignKey("papers.paper_id", ondelete="CASCADE"))
+    claim_type       = Column(Text, default="empirical")
+    claim            = Column(Text, nullable=False)
+    page_number      = Column(SmallInteger, nullable=True)
+    quote            = Column(Text, nullable=True)
+    tags             = Column(ARRAY(Text), nullable=True)
+    created_at       = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Empirical / theoretical
+    direction        = Column(Text, nullable=True)
+    effect_size      = Column(Text, nullable=True)
+    population       = Column(Text, nullable=True)
+    period           = Column(Text, nullable=True)
+    confidence_level = Column(Float, nullable=True)
+
+    # Theoretical / conceptual
+    logical_form     = Column(Text, nullable=True)
+    scope_conditions = Column(Text, nullable=True)
+
+    # Historical
+    historical_period = Column(Text, nullable=True)
+    geographic_scope  = Column(Text, nullable=True)
+
+    paper = relationship("Paper", back_populates="claims")
+
+# ==========================================
+# ANNOTATIONS MODEL
+# ==========================================
+class Annotation(Base):
+    __tablename__ = "annotations"
+
+    annotation_id         = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    paper_id              = Column(UUID(as_uuid=True), ForeignKey("papers.paper_id", ondelete="CASCADE"))
+    page_number           = Column(SmallInteger, nullable=True)
+    highlight_text        = Column(Text, nullable=True)
+    user_note             = Column(Text, nullable=True)
+    color                 = Column(Text, nullable=True)   # yellow, red, green, blue, purple
+    annotation_type       = Column(Text, default="highlight")
+    zotero_annotation_key = Column(Text, unique=True, nullable=True)
+    contributor_id        = Column(UUID(as_uuid=True), ForeignKey("contributors.contributor_id", ondelete="SET NULL"), nullable=True)
+    created_at            = Column(DateTime(timezone=True), server_default=func.now())
+    synced_at             = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Extended fields from migrations
+    attachment_id         = Column(UUID(as_uuid=True), ForeignKey("attachments.attachment_id", ondelete="SET NULL"), nullable=True)
+    annotation_position   = Column(Text, nullable=True)   # JSONB → Text is fine for now
+    annotation_sort_index = Column(Text, nullable=True)
+    claim_id              = Column(UUID(as_uuid=True), ForeignKey("claims.claim_id", ondelete="SET NULL"), nullable=True)
+
+    paper = relationship("Paper", back_populates="annotations")
     contributor = relationship("Contributor")

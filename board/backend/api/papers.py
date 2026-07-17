@@ -5,12 +5,27 @@ from uuid import UUID
 
 from core.database import get_db
 from models.core import Paper
-from schemas.core import PaperCreate, PaperResponse
+from schemas.core import (
+    PaperCreate, 
+    PaperResponse,
+    PaperUpdate
+)
 
 router = APIRouter(
     prefix="/api/papers",
     tags=["Papers"]
 )
+
+@router.put("/{paper_id}", response_model=PaperResponse)
+def update_paper(paper_id: UUID, updates: PaperUpdate, db: Session = Depends(get_db)):
+    paper = db.query(Paper).filter(Paper.paper_id == paper_id).first()
+    if not paper:
+        raise HTTPException(status_code=404, detail="Paper not found")
+    for field, value in updates.model_dump(exclude_unset=True).items():
+        setattr(paper, field, value)
+    db.commit()
+    db.refresh(paper)
+    return paper
 
 @router.post("/", response_model=PaperResponse, status_code=201)
 def create_paper(paper_in: PaperCreate, db: Session = Depends(get_db)):

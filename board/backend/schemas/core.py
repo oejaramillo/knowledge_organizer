@@ -129,9 +129,23 @@ class BinnacleUpdate(BaseModel):
     meeting_id: Optional[UUID] = None
     author_id: Optional[UUID] = None
 
+# ==========================================
+# AUTHORS
+# ==========================================
+class AuthorResponse(BaseModel):
+    author_id:   UUID
+    full_name:   str
+    last_name:   Optional[str] = None
+    first_name:  Optional[str] = None
+    institution: Optional[str] = None
+    country:     Optional[str] = None
+    orcid:       Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
 
 # ==========================================
-# 4. PAPERS
+# PAPERS
 # ==========================================
 class PaperBase(BaseModel):
     title: str
@@ -146,6 +160,8 @@ class PaperBase(BaseModel):
     language: Optional[str] = "en"
     pdf_path: Optional[str] = None
     url: Optional[str] = None
+    star:  Optional[bool] = False
+    notes: Optional[str] = None
     
     document_type: Optional[str] = "journal_article"
     discipline: Optional[List[str]] = None
@@ -164,6 +180,27 @@ class PaperResponse(PaperBase):
     paper_id: UUID
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    authors: List[AuthorResponse] = []
+
+    model_config = ConfigDict(from_attributes=True)
+
+class PaperUpdate(BaseModel):
+    status:               Optional[str] = None
+    star:                 Optional[bool] = None
+    notes:                Optional[str] = None
+    is_read:              Optional[bool] = None
+    theoretical_framework: Optional[str] = None
+    discipline:           Optional[List[str]] = None
+    citation_intent:      Optional[List[str]] = None
+    replication_available: Optional[bool] = None
+    code_available:       Optional[bool] = None
+
+class PaperProjectResponse(BaseModel):
+    paper_id:       UUID
+    relevance_note: Optional[str] = None
+    citation_intent: Optional[str] = None
+    added_at:       Optional[datetime] = None
+    paper:          PaperResponse
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -222,15 +259,82 @@ class IdeaResponse(BaseModel):
 
 
 # ==========================================
+# CLAIMS
+# ==========================================
+class ClaimResponse(BaseModel):
+    claim_id:          UUID
+    paper_id:          UUID
+    claim_type:        Optional[str] = "empirical"
+    claim:             str
+    page_number:       Optional[int] = None
+    quote:             Optional[str] = None
+    tags:              Optional[List[str]] = None
+    created_at:        Optional[datetime] = None
+
+    direction:         Optional[str] = None
+    effect_size:       Optional[str] = None
+    population:        Optional[str] = None
+    period:            Optional[str] = None
+    confidence_level:  Optional[float] = None
+
+    logical_form:      Optional[str] = None
+    scope_conditions:  Optional[str] = None
+
+    historical_period: Optional[str] = None
+    geographic_scope:  Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+class ClaimCreate(BaseModel):
+    paper_id:          UUID
+    claim_type:        Optional[str] = "empirical"
+    claim:             str
+    page_number:       Optional[int] = None
+    quote:             Optional[str] = None
+    tags:              Optional[List[str]] = None
+    direction:         Optional[str] = None
+    effect_size:       Optional[str] = None
+    population:        Optional[str] = None
+    period:            Optional[str] = None
+    confidence_level:  Optional[float] = None
+    logical_form:      Optional[str] = None
+    scope_conditions:  Optional[str] = None
+    historical_period: Optional[str] = None
+    geographic_scope:  Optional[str] = None
+
+
+# ==========================================
+# ANNOTATIONS
+# ==========================================
+class AnnotationResponse(BaseModel):
+    annotation_id:         UUID
+    paper_id:              UUID
+    page_number:           Optional[int] = None
+    highlight_text:        Optional[str] = None
+    user_note:             Optional[str] = None
+    color:                 Optional[str] = None
+    annotation_type:       Optional[str] = "highlight"
+    zotero_annotation_key: Optional[str] = None
+    contributor_id:        Optional[UUID] = None
+    claim_id:              Optional[UUID] = None
+    annotation_sort_index: Optional[str] = None
+    created_at:            Optional[datetime] = None
+    synced_at:             Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ==========================================
 # 7. AGGREGATE DASHBOARD SCHEMAS
 # ==========================================
 # This one pulls everything together! When you hit your frontend API, 
 # returning this model will give you the project AND all its activities.
 class ProjectDetailedResponse(ProjectResponse):
-    tasks: List[TaskResponse] = Field(default_factory=list)
-    meetings: List[MeetingResponse] = Field(default_factory=list)
-    binnacle_entries: List[BinnacleResponse] = Field(default_factory=list)
+    tasks:               List[TaskResponse] = Field(default_factory=list)
+    meetings:            List[MeetingResponse] = Field(default_factory=list)
+    binnacle_entries:    List[BinnacleResponse] = Field(default_factory=list)
     project_contributors: List[ProjectContributorResponse] = Field(default_factory=list)
-    ideas: List[IdeaResponse] = []
+    paper_associations:  List[PaperProjectResponse] = Field(default_factory=list)  # ← add
+    ideas:               List[IdeaResponse] = []
 
     model_config = ConfigDict(from_attributes=True)
