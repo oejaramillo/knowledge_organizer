@@ -6,9 +6,9 @@ const API = "http://localhost:8000";
 function formatDate(dateStr) {
   if (!dateStr) return "";
   const d = new Date(dateStr);
-  const day = String(d.getDate()).padStart(2, "0");
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const year = d.getFullYear();
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  const month = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const year = d.getUTCFullYear();
   return `${day}/${month}/${year}`;
 }
 
@@ -57,9 +57,9 @@ export default function BinnacleList({ binnacleEntries = [], projectId, fetchPro
     setForm({
       title: entry.title || "",
       content: entry.content || "",
-      day: String(d.getDate()).padStart(2, "0"),
-      month: String(d.getMonth() + 1).padStart(2, "0"),
-      year: String(d.getFullYear()),
+      day: String(d.getUTCDate()).padStart(2, "0"),
+      month: String(d.getUTCMonth() + 1).padStart(2, "0"),
+      year: String(d.getUTCFullYear()),
       author_id: entry.author_id || "",
       meeting_id: entry.meeting_id || "",
       task_id: entry.task_id || "",
@@ -75,7 +75,7 @@ export default function BinnacleList({ binnacleEntries = [], projectId, fetchPro
     setSubmitting(true);
 
     const entryDate = form.day && form.month && form.year
-      ? `${form.year}-${String(form.month).padStart(2, "0")}-${String(form.day).padStart(2, "0")}T00:00:00`
+      ? `${form.year}-${String(form.month).padStart(2, "0")}-${String(form.day).padStart(2, "0")}T00:00:00Z`
       : undefined;
 
     const payload = {

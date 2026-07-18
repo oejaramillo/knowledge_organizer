@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import IdeaList from "../ideas/IdeaList";
 import MeetingList from "../meetings/MeetingList";
 import BinnacleList from "../binnacle/BinnacleList";
+import PaperList from '../papers/PaperList';
 
 const API = "http://localhost:8000";
 
@@ -384,6 +385,12 @@ export default function ProjectDetail() {
           />
         )}
 
+        {/* Papers */}
+        {activeSection === "papers" && (
+          <PaperList 
+            paperAssociations={project.paper_associations ?? []} 
+          />
+        )}
 
       </div>
     </div>

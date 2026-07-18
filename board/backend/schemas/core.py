@@ -286,7 +286,7 @@ class ClaimResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 class ClaimCreate(BaseModel):
-    paper_id:          UUID
+    paper_id: Optional[UUID] = None
     claim_type:        Optional[str] = "empirical"
     claim:             str
     page_number:       Optional[int] = None
