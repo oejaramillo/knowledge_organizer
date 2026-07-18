@@ -71,6 +71,14 @@ class TaskResponse(TaskBase):
 
     model_config = ConfigDict(from_attributes=True)
 
+class TaskUpdate(BaseModel):
+    title:       Optional[str] = None
+    description: Optional[str] = None
+    status:      Optional[str] = None
+    priority:    Optional[str] = None
+    due_date:    Optional[datetime] = None
+    assigned_to: Optional[UUID] = None
+
 
 # ==========================================
 # 2. MEETINGS

@@ -4,6 +4,7 @@ import IdeaList from "../ideas/IdeaList";
 import MeetingList from "../meetings/MeetingList";
 import BinnacleList from "../binnacle/BinnacleList";
 import PaperList from '../papers/PaperList';
+import TaskList from "../tasks/TaskList";
 
 const API = "http://localhost:8000";
 
@@ -389,6 +390,16 @@ export default function ProjectDetail() {
         {activeSection === "papers" && (
           <PaperList 
             paperAssociations={project.paper_associations ?? []} 
+          />
+        )}
+
+        {/* Tasks */}
+        {activeSection === "tasks" && (
+          <TaskList
+            tasks={project.tasks ?? []}
+            projectId={project.project_id}
+            fetchProject={fetchProject}
+            projectContributors={project.project_contributors}
           />
         )}
 

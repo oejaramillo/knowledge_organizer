@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from typing import List
 from uuid import UUID
 
 from core.database import get_db
 from models.core import ProjectTask, Project, Contributor
-from schemas.core import TaskCreate, TaskResponse
+from schemas.core import TaskCreate, TaskResponse, TaskUpdate
 
 
 router = APIRouter(
@@ -39,8 +39,30 @@ def create_task(task_in: TaskCreate, db: Session = Depends(get_db)):
     new_task = ProjectTask(**task_in.model_dump())
     db.add(new_task)
     db.commit()
-    db.refresh(new_task)
-    return new_task
+
+    task = (
+        db.query(ProjectTask)
+        .options(selectinload(ProjectTask.assignee))
+        .filter(ProjectTask.task_id == new_task.task_id)
+        .first()
+    )
+    return task
+
+@router.put("/{task_id}", response_model=TaskResponse)
+def update_task(task_id: UUID, patch: TaskUpdate, db: Session = Depends(get_db)):
+    task = db.query(ProjectTask).filter(ProjectTask.task_id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    for k, v in patch.model_dump(exclude_unset=True).items():
+        setattr(task, k, v)
+    db.commit()
+    task = (
+        db.query(ProjectTask)
+        .options(selectinload(ProjectTask.assignee))
+        .filter(ProjectTask.task_id == task_id)   # ← fix: task_id not new_task.task_id
+        .first()
+    )
+    return task
 
 @router.get("/", response_model=List[TaskResponse])
 def get_all_tasks(db: Session = Depends(get_db)):
