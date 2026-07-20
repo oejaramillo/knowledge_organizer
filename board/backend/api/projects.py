@@ -11,7 +11,8 @@ from models.core import (
     Contributor,
     ProjectBinnacle,
     PaperProject,
-    Paper
+    Paper,
+    ProjectTask
 )
 
 from schemas.core import (
@@ -49,7 +50,7 @@ def get_project(project_id: UUID, db: Session = Depends(get_db)):
             selectinload(Project.binnacle_entries).selectinload(ProjectBinnacle.author),
             selectinload(Project.binnacle_entries).selectinload(ProjectBinnacle.task),
             selectinload(Project.binnacle_entries).selectinload(ProjectBinnacle.meeting),
-            selectinload(Project.tasks),
+            selectinload(Project.tasks).selectinload(ProjectTask.assignee),
             selectinload(Project.meetings),
             selectinload(Project.ideas),
             selectinload(Project.project_contributors)

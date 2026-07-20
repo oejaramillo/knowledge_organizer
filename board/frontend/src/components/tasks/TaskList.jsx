@@ -6,7 +6,6 @@ import { COLUMNS, EMPTY_FORM } from './taskUtils';
 const API = 'http://localhost:8000';
 
 export default function TaskList({ tasks: initialTasks, projectId, projectContributors }) {
-  const [tasks, setTasks]             = useState(initialTasks);
   const [showForm, setShowForm]       = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [form, setForm]               = useState(EMPTY_FORM);
@@ -46,9 +45,8 @@ export default function TaskList({ tasks: initialTasks, projectId, projectContri
       const method = editingTask ? 'PUT' : 'POST';
       const res    = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       if (!res.ok) throw new Error('Request failed');
-      const saved = await res.json();
-      setTasks(prev => editingTask ? prev.map(t => t.task_id === saved.task_id ? saved : t) : [...prev, saved]);
       closeForm();
+      fetchProject();
     } catch (err) {
       console.error(err);
     } finally {
@@ -59,23 +57,20 @@ export default function TaskList({ tasks: initialTasks, projectId, projectContri
   const handleDelete = async (taskId) => {
     if (!window.confirm('Delete this task?')) return;
     await fetch(`${API}/api/tasks/${taskId}`, { method: 'DELETE' });
-    setTasks(prev => prev.filter(t => t.task_id !== taskId));
+    fetchProject();
   };
 
   const handleDrop = async (newStatus) => {
     if (!draggingId) return;
-    const task = tasks.find(t => t.task_id === draggingId);
+    const task = initialTasks.find(t => t.task_id === draggingId);
     if (!task || task.status === newStatus) { setDraggingId(null); return; }
-    const res = await fetch(`${API}/api/tasks/${draggingId}`, {
+    await fetch(`${API}/api/tasks/${draggingId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: newStatus }),
     });
-    if (res.ok) {
-      const updated = await res.json();
-      setTasks(prev => prev.map(t => t.task_id === draggingId ? updated : t));
-    }
     setDraggingId(null);
+    fetchProject();
   };
 
   return (
@@ -105,7 +100,7 @@ export default function TaskList({ tasks: initialTasks, projectId, projectContri
           <TaskColumn
             key={col.key}
             column={col}
-            tasks={tasks.filter(t => t.status === col.key)}
+            tasks={initialTasks.filter(t => t.status === col.key)}
             draggingId={draggingId}
             onDragStart={setDraggingId}
             onDragEnd={() => setDraggingId(null)}

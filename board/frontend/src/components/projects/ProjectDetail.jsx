@@ -395,13 +395,13 @@ export default function ProjectDetail() {
 
         {/* Tasks */}
         {activeSection === "tasks" && (
-          <TaskList
-            tasks={project.tasks ?? []}
-            projectId={project.project_id}
-            fetchProject={fetchProject}
-            projectContributors={project.project_contributors}
-          />
-        )}
+            <TaskList
+              tasks={project.tasks ?? []}
+              projectId={project.project_id}
+              projectContributors={project.project_contributors}
+              fetchProject={fetchProject} 
+            />
+          )}
 
       </div>
     </div>
