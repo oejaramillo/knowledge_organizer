@@ -23,6 +23,7 @@ export default function ProjectDetail() {
 
   // Form state
   const [form, setForm] = useState({ name: "", email: "", site: "", project_role: "" });
+  const [savingType, setSavingType] = useState(false);
   // Autocomplete state
   const [allContributors, setAllContributors] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
@@ -93,6 +94,18 @@ export default function ProjectDetail() {
     setSuggestions([]);
   };
 
+  const handleTypeToggle = async (newType) => {
+    if (newType === project?.project_type) return;
+    setSavingType(true);
+    await fetch(`${API}/api/projects/${project_id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ project_type: newType }),
+    });
+    setSavingType(false);
+    fetchProject();
+  };
+
   const handleChange = (e) =>
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 
@@ -158,9 +171,39 @@ export default function ProjectDetail() {
   const contributors = project.project_contributors ?? [];
 
   return (
-    <div className="project-detail">
-      <div className="project-detail__header">
-        <h2>{project.name}</h2>
+  <div className="project-detail">
+    <div className="project-detail__header">
+      <div className="detail-header">
+        <div>
+          <h2>{project.name}</h2>   {/* ← keep only this one */}
+          {project.zotero_collection_key && (
+            <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>
+              Synced from Zotero: {project.name}
+            </p>
+          )}
+        </div>
+
+        {/* Type toggle */}
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          {savingType && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Saving…</span>}
+          {['research', 'collection'].map(type => (
+            <button
+              key={type}
+              onClick={() => handleTypeToggle(type)}
+              style={{
+                padding: '4px 14px', fontSize: 12, fontWeight: 600,
+                borderRadius: 999, border: '1px solid var(--border-color)',
+                cursor: 'pointer',
+                background: project.project_type === type ? 'var(--accent-blue)' : 'var(--bg-white)',
+                color:      project.project_type === type ? '#fff' : 'var(--text-muted)',
+                transition: 'all 0.15s',
+              }}
+            >
+              {type}
+            </button>
+          ))}
+        </div>
+      </div>
         <span className={`status-badge status-badge--${project.status}`}>
           {project.status}
         </span>

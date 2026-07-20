@@ -236,6 +236,13 @@ class ProjectResponse(ProjectBase):
     
     model_config = ConfigDict(from_attributes=True)
 
+class ProjectUpdate(BaseModel):
+    name:        Optional[str] = None
+    description: Optional[str] = None
+    status:      Optional[str] = None
+    project_type: Optional[str] = None
+    keywords:    Optional[List[str]] = None
+
 # ==========================================
 # 6. IDEAS
 # ==========================================

@@ -8,15 +8,24 @@ export default function MainLayout({ projectType, onToggle }) {
       {/* Left pane */}
       <aside className="w-64 border-r border-slate-200 flex flex-col">
         {/* Toggle */}
-        <div className="flex gap-2 p-3 border-b border-slate-200">
+        <div style={{ display: 'flex', gap: 6, padding: '10px 12px', borderBottom: '1px solid var(--border-color)' }}>
           {['research', 'collection'].map(type => (
             <button
               key={type}
               onClick={() => onToggle(type)}
-              className={`flex-1 py-1 rounded text-sm capitalize font-medium transition-colors
-                ${projectType === type
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-slate-500 hover:bg-slate-100'}`}
+              style={{
+                flex: 1,
+                padding: '5px 14px',
+                fontSize: 12,
+                fontWeight: 600,
+                borderRadius: 999,
+                border: '1px solid var(--border-color)',
+                cursor: 'pointer',
+                background: projectType === type ? 'var(--accent-blue)' : 'var(--bg-white)',
+                color:      projectType === type ? '#fff' : 'var(--text-muted)',
+                transition: 'all 0.15s',
+                textTransform: 'capitalize',
+              }}
             >
               {type}
             </button>

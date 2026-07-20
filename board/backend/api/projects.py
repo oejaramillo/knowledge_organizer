@@ -20,7 +20,8 @@ from schemas.core import (
     ProjectResponse, 
     ProjectDetailedResponse, 
     ProjectContributorCreate, 
-    ProjectContributorResponse
+    ProjectContributorResponse,
+    ProjectUpdate
 )
 
 
@@ -36,6 +37,17 @@ def get_all_projects(db: Session = Depends(get_db)):
     """
     projects = db.query(Project).all()
     return projects
+
+@router.patch("/{project_id}", response_model=ProjectResponse)
+def update_project(project_id: UUID, patch: ProjectUpdate, db: Session = Depends(get_db)):
+    project = db.query(Project).filter(Project.project_id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    for k, v in patch.model_dump(exclude_unset=True).items():
+        setattr(project, k, v)
+    db.commit()
+    db.refresh(project)
+    return project
 
 @router.get("/{project_id}", response_model=ProjectDetailedResponse)
 def get_project(project_id: UUID, db: Session = Depends(get_db)):
