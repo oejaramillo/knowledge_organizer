@@ -8,7 +8,16 @@ const API = 'http://localhost:8000';
 export default function PaperRow({ paper, isExpanded, onToggleExpand, onUpdate }) {
   const authors = formatAuthors(paper.authors);
   const [pickingDate, setPickingDate] = useState(false);
-  const [dateValue, setDateValue] = useState(() => new Date().toISOString().split('T')[0]);
+
+  const getLocalTodayString = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+  const [dateValue, setDateValue] = useState(() => getLocalTodayString());
   const popoverRef = useRef(null);
 
   // Close popover on outside click
@@ -40,7 +49,7 @@ export default function PaperRow({ paper, isExpanded, onToggleExpand, onUpdate }
   const handleCheckbox = (e) => {
     e.stopPropagation();
     if (!paper.is_read) {
-      setDateValue(new Date().toISOString().split('T')[0]);
+      setDateValue(getLocalTodayString());
       setPickingDate(true);
     } else {
       patchPaper({ is_read: false, date_read: null });
@@ -59,7 +68,12 @@ export default function PaperRow({ paper, isExpanded, onToggleExpand, onUpdate }
   };
 
   const readDate = paper.date_read
-    ? new Date(paper.date_read).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+    ? new Date(paper.date_read).toLocaleDateString('en-GB', { 
+        day: '2-digit', 
+        month: 'short', 
+        year: 'numeric',
+        timeZone: 'UTC' // <--- Forces JS to display the UTC date instead of converting to your local time
+      })
     : null;
 
   return (
