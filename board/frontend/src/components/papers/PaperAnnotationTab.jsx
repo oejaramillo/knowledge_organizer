@@ -45,20 +45,21 @@ export default function PaperAnnotationsTab({ paperId }) {
 
         {/* Color filter pills */}
         <div style={{ display: 'flex', gap: 4 }}>
-          {colors.map(color => {
-            const style = ANNOTATION_COLORS[color] || { bg: '#f1f5f9', text: '#64748b', border: '#e2e8f0' };
-            return (
-              <button
-                key={color}
-                onClick={() => setFilterColor(f => f === color ? '' : color)}
-                style={{
-                  width: 20, height: 20, borderRadius: '50%', border: `2px solid ${filterColor === color ? '#1e293b' : style.border}`,
-                  background: style.bg, cursor: 'pointer', padding: 0,
-                }}
-                title={color}
-              />
-            );
-          })}
+          {colors.map(color => (
+            <button
+              key={color}
+              onClick={() => setFilterColor(f => f === color ? '' : color)}
+              style={{
+                width: 20, height: 20, borderRadius: '50%',
+                border: `2px solid ${filterColor === color ? '#1e293b' : color}`,
+                background: color,   // ← use the hex directly
+                cursor: 'pointer', padding: 0,
+                opacity: filterColor && filterColor !== color ? 0.4 : 1,
+                transition: 'all 0.15s',
+              }}
+              title={color}
+            />
+          ))}
         </div>
 
         {/* Type filter */}
@@ -83,21 +84,28 @@ export default function PaperAnnotationsTab({ paperId }) {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {filtered.map(a => {
-            const colorStyle = ANNOTATION_COLORS[a.color] || { bg: '#f8fafc', text: '#1e293b', border: '#e2e8f0' };
+            const borderColor = a.color || '#e2e8f0';
+            const bgColor     = a.color ? `${a.color}22` : '#f8fafc'; // hex + alpha for bg
+            const textColor   = 'var(--text-main)';
+
             return (
               <div key={a.annotation_id} style={{
-                borderLeft: `4px solid ${colorStyle.border}`,
-                background: colorStyle.bg,
+                borderLeft: `4px solid ${borderColor}`,
+                background: bgColor,
                 borderRadius: '0 8px 8px 0',
                 padding: '10px 14px',
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: a.highlight_text || a.user_note ? 6 : 0 }}>
                   <span style={{ fontSize: 14 }}>{TYPE_ICONS[a.annotation_type] || '📌'}</span>
                   {a.page_number && (
-                    <span style={{ fontSize: 11, color: colorStyle.text, opacity: 0.7 }}>p. {a.page_number}</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>p. {a.page_number}</span>
                   )}
                   {a.color && (
-                    <span style={{ fontSize: 11, color: colorStyle.text, opacity: 0.7, textTransform: 'capitalize' }}>
+                    <span style={{
+                      fontSize: 10, padding: '1px 7px', borderRadius: 999,
+                      background: a.color, color: '#fff', fontWeight: 600,
+                      textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+                    }}>
                       {a.color}
                     </span>
                   )}
@@ -106,15 +114,15 @@ export default function PaperAnnotationsTab({ paperId }) {
                 {a.highlight_text && (
                   <blockquote style={{
                     margin: '0 0 6px', padding: '4px 10px',
-                    borderLeft: `3px solid ${colorStyle.border}`,
-                    fontSize: 13, color: colorStyle.text, fontStyle: 'italic', lineHeight: 1.6,
+                    borderLeft: `3px solid ${borderColor}`,
+                    fontSize: 13, color: textColor, fontStyle: 'italic', lineHeight: 1.6,
                   }}>
                     "{a.highlight_text}"
                   </blockquote>
                 )}
 
                 {a.user_note && (
-                  <p style={{ margin: 0, fontSize: 13, color: colorStyle.text, lineHeight: 1.5 }}>
+                  <p style={{ margin: 0, fontSize: 13, color: textColor, lineHeight: 1.5 }}>
                     💬 {a.user_note}
                   </p>
                 )}
