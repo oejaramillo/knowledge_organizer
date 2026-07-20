@@ -33,7 +33,6 @@ export default function PaperList({ paperAssociations = [] }) {
         p.theoretical_framework?.toLowerCase().includes(q)
       );
     }
-    if (filterStatus) list = list.filter(p => p.status === filterStatus);
     if (filterType)   list = list.filter(p => p.document_type === filterType);
     if (filterRead === 'read')   list = list.filter(p => p.is_read);
     if (filterRead === 'unread') list = list.filter(p => !p.is_read);
@@ -42,7 +41,6 @@ export default function PaperList({ paperAssociations = [] }) {
       if (sortBy === 'year_desc') return (b.year || 0) - (a.year || 0);
       if (sortBy === 'year_asc')  return (a.year || 0) - (b.year || 0);
       if (sortBy === 'title')     return (a.title || '').localeCompare(b.title || '');
-      if (sortBy === 'status')    return (a.status || '').localeCompare(b.status || '');
       return 0;
     });
 
@@ -87,17 +85,6 @@ export default function PaperList({ paperAssociations = [] }) {
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
-        <select
-          className="form-input"
-          style={{ flex: '0 1 130px' }}
-          value={filterStatus}
-          onChange={e => setStatus(e.target.value)}
-        >
-          <option value="">All statuses</option>
-          {STATUS_OPTIONS.map(s => (
-            <option key={s.value} value={s.value}>{s.label}</option>
-          ))}
-        </select>
         <select
           className="form-input"
           style={{ flex: '0 1 130px' }}

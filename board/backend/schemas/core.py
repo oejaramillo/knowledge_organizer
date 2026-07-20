@@ -168,7 +168,9 @@ class PaperBase(BaseModel):
     language: Optional[str] = "en"
     pdf_path: Optional[str] = None
     url: Optional[str] = None
-    star:  Optional[bool] = False
+    date_read:  Optional[datetime] = None
+    rating:     Optional[int] = Field(None, ge=1, le=5)
+    is_digital: Optional[bool] = False
     notes: Optional[str] = None
     
     document_type: Optional[str] = "journal_article"
@@ -194,7 +196,9 @@ class PaperResponse(PaperBase):
 
 class PaperUpdate(BaseModel):
     status:               Optional[str] = None
-    star:                 Optional[bool] = None
+    date_read:  Optional[datetime] = None
+    rating:     Optional[int] = Field(None, ge=1, le=5)
+    is_digital: Optional[bool] = None
     notes:                Optional[str] = None
     is_read:              Optional[bool] = None
     theoretical_framework: Optional[str] = None

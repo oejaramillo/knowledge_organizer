@@ -19,13 +19,13 @@ router = APIRouter(
     tags=["Papers"]
 )
 
-@router.put("/{paper_id}", response_model=PaperResponse)
-def update_paper(paper_id: UUID, updates: PaperUpdate, db: Session = Depends(get_db)):
+@router.patch("/{paper_id}", response_model=PaperResponse)
+def update_paper(paper_id: UUID, patch: PaperUpdate, db: Session = Depends(get_db)):
     paper = db.query(Paper).filter(Paper.paper_id == paper_id).first()
     if not paper:
         raise HTTPException(status_code=404, detail="Paper not found")
-    for field, value in updates.model_dump(exclude_unset=True).items():
-        setattr(paper, field, value)
+    for k, v in patch.model_dump(exclude_unset=True).items():
+        setattr(paper, k, v)
     db.commit()
     db.refresh(paper)
     return paper

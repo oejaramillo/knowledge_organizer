@@ -2,9 +2,7 @@
 import React, { useState } from 'react';
 import PaperClaimsTab from './PaperClaimsTab';
 import PaperAnnotationsTab from './PaperAnnotationTab';
-import {
-  STATUS_OPTIONS, DISCIPLINE_OPTIONS, CITATION_INTENT_OPTIONS, formatAuthors
-} from './paperUtils';
+import { DISCIPLINE_OPTIONS, formatAuthors } from './paperUtils';
 
 const API = 'http://localhost:8000';
 const TABS = ['Overview', 'Claims', 'Annotations'];
@@ -13,10 +11,10 @@ export default function PaperDetail({ paper, onUpdate }) {
   const [activeTab, setActiveTab] = useState('Overview');
   const [saving, setSaving]       = useState(false);
   const [form, setForm]           = useState({
-    status:               paper.status || 'unread',
     theoretical_framework: paper.theoretical_framework || '',
-    discipline:           paper.discipline || [],
-    citation_intent:      paper.citation_intent || [],
+    discipline:            paper.discipline || [],
+    rating:                paper.rating ?? null,
+    is_digital:            paper.is_digital ?? false,
   });
 
   const setField = (field, value) => setForm(f => ({ ...f, [field]: value }));
@@ -35,7 +33,7 @@ export default function PaperDetail({ paper, onUpdate }) {
     setSaving(true);
     try {
       const res = await fetch(`${API}/api/papers/${paper.paper_id}`, {
-        method: 'PUT',
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       });
@@ -57,6 +55,7 @@ export default function PaperDetail({ paper, onUpdate }) {
       <h3 style={{ margin: '0 0 4px', fontSize: 16, fontWeight: 700, color: 'var(--text-main)', lineHeight: 1.4 }}>
         {paper.title}
       </h3>
+
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
         {TABS.map(tab => (
@@ -64,11 +63,8 @@ export default function PaperDetail({ paper, onUpdate }) {
             key={tab}
             onClick={() => setActiveTab(tab)}
             style={{
-              padding: '5px 14px',
-              fontSize: 13,
-              borderRadius: 6,
-              border: '1px solid var(--border-color)',
-              cursor: 'pointer',
+              padding: '5px 14px', fontSize: 13, borderRadius: 6,
+              border: '1px solid var(--border-color)', cursor: 'pointer',
               background: activeTab === tab ? 'var(--accent-blue)' : 'var(--bg-white)',
               color:      activeTab === tab ? '#fff' : 'var(--text-muted)',
               fontWeight: activeTab === tab ? 600 : 400,
@@ -96,14 +92,14 @@ export default function PaperDetail({ paper, onUpdate }) {
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
                   {authorsList.map(pa => (
                     <span key={pa.author_id} style={authorChipStyle}>
-                        {pa.full_name}
-                        {pa.institution && (
+                      {pa.full_name}
+                      {pa.institution && (
                         <span style={{ color: 'var(--text-muted)', marginLeft: 4 }}>
-                            · {pa.institution}
+                          · {pa.institution}
                         </span>
-                        )}
+                      )}
                     </span>
-                    ))}
+                  ))}
                 </div>
               )}
             </div>
@@ -150,18 +146,58 @@ export default function PaperDetail({ paper, onUpdate }) {
           {/* Right column — editable fields */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
-            {/* Status */}
+            {/* Rating */}
             <div>
-              <label style={labelStyle}>Status</label>
-              <select
-                className="form-input"
-                value={form.status}
-                onChange={e => setField('status', e.target.value)}
-              >
-                {STATUS_OPTIONS.map(s => (
-                  <option key={s.value} value={s.value}>{s.label}</option>
+              <label style={labelStyle}>Rating</label>
+              <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
+                {[1, 2, 3, 4, 5].map(star => (
+                  <button
+                    key={star}
+                    onClick={() => setField('rating', form.rating === star ? null : star)}
+                    style={{
+                      fontSize: 22,
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: form.rating >= star ? '#f59e0b' : '#d1d5db',
+                      padding: '0 2px',
+                      lineHeight: 1,
+                      transition: 'color 0.1s',
+                    }}
+                    title={`${star} star${star > 1 ? 's' : ''}`}
+                  >
+                    ★
+                  </button>
                 ))}
-              </select>
+                {form.rating && (
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>
+                    {form.rating}/5
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Is Digital */}
+            <div>
+              <label style={labelStyle}>Format</label>
+              <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                {[{ val: true, label: '💾 Digital (PDF)' }, { val: false, label: '📖 Physical' }].map(opt => (
+                  <button
+                    key={String(opt.val)}
+                    onClick={() => setField('is_digital', opt.val)}
+                    style={{
+                      padding: '5px 14px', fontSize: 12, borderRadius: 999,
+                      border: `1px solid ${form.is_digital === opt.val ? 'var(--accent-blue)' : 'var(--border-color)'}`,
+                      background: form.is_digital === opt.val ? 'var(--accent-bg)' : 'transparent',
+                      color: form.is_digital === opt.val ? 'var(--accent-blue)' : 'var(--text-muted)',
+                      cursor: 'pointer', fontWeight: form.is_digital === opt.val ? 600 : 400,
+                      transition: 'all 0.12s',
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Theoretical Framework */}
@@ -186,22 +222,6 @@ export default function PaperDetail({ paper, onUpdate }) {
                     style={tagToggleStyle(form.discipline?.includes(d))}
                   >
                     {d}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Citation Intent */}
-            <div>
-              <label style={labelStyle}>Citation Intent</label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
-                {CITATION_INTENT_OPTIONS.map(ci => (
-                  <button
-                    key={ci}
-                    onClick={() => toggleArray('citation_intent', ci)}
-                    style={tagToggleStyle(form.citation_intent?.includes(ci))}
-                  >
-                    {ci.replace(/_/g, ' ')}
                   </button>
                 ))}
               </div>
