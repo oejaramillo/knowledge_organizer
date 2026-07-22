@@ -49,6 +49,11 @@ export default function ProjectDetail() {
 
   useEffect(() => { fetchProject(); }, [project_id]);
 
+  // Reset active section whenever project changes
+  useEffect(() => {
+    setActiveSection(null);
+  }, [project_id]);
+
   // Close suggestions on outside click
   useEffect(() => {
     const handler = (e) => {
@@ -397,10 +402,10 @@ export default function ProjectDetail() {
           ))}
         </div>
 
-        {/* Section panel */}
         {/* Ideas */}
         {activeSection === 'ideas' && (
           <IdeaList
+            key={project_id}
             ideas={project.ideas ?? []}
             projectId={project.project_id}
             onIdeaAdded={fetchProject}
@@ -408,8 +413,9 @@ export default function ProjectDetail() {
         )}
 
         {/* Meetings */}
-        {activeSection === "meetings" && (
+        {activeSection === 'meetings' && (
           <MeetingList
+            key={project_id}
             meetings={project.meetings}
             projectId={project.project_id}
             fetchProject={fetchProject}
@@ -418,8 +424,9 @@ export default function ProjectDetail() {
         )}
 
         {/* Binnacle */}
-        {activeSection === "binnacle" && (
+        {activeSection === 'binnacle' && (
           <BinnacleList
+            key={project_id}
             binnacleEntries={project.binnacle_entries}
             projectId={project.project_id}
             fetchProject={fetchProject}
@@ -430,21 +437,25 @@ export default function ProjectDetail() {
         )}
 
         {/* Papers */}
-        {activeSection === "papers" && (
-          <PaperList 
-            paperAssociations={project.paper_associations ?? []} 
+        {activeSection === 'papers' && (
+          <PaperList
+            key={project_id}
+            paperAssociations={project.paper_associations ?? []}
+            projectId={project.project_id}
+            onUpdate={fetchProject}
           />
         )}
 
         {/* Tasks */}
-        {activeSection === "tasks" && (
-            <TaskList
-              tasks={project.tasks ?? []}
-              projectId={project.project_id}
-              projectContributors={project.project_contributors}
-              fetchProject={fetchProject} 
-            />
-          )}
+        {activeSection === 'tasks' && (
+          <TaskList
+            key={project_id}
+            tasks={project.tasks ?? []}
+            projectId={project.project_id}
+            projectContributors={project.project_contributors}
+            fetchProject={fetchProject}
+          />
+        )}
 
       </div>
     </div>

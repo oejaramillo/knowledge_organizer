@@ -12,6 +12,12 @@ router = APIRouter(prefix="/api/authors", tags=["Authors"])
 
 from schemas.core import AuthorDetail, AuthorUpdate, PaperResponse
 
+@router.get("/countries", response_model=List[str])
+def get_countries(db: Session = Depends(get_db)):
+    rows = db.query(Author.country).filter(Author.country.isnot(None)).distinct().all()
+    return sorted([r[0] for r in rows if r[0]])
+
+
 @router.get("/{author_id}", response_model=AuthorDetail)
 def get_author(author_id: UUID, db: Session = Depends(get_db)):
     author = (
