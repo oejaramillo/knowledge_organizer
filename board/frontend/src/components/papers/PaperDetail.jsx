@@ -1,8 +1,8 @@
 // src/components/papers/PaperDetail.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import PaperClaimsTab from './PaperClaimsTab';
 import PaperAnnotationsTab from './PaperAnnotationTab';
-import { DISCIPLINE_OPTIONS, formatAuthors } from './paperUtils';
+import { DISCIPLINE_OPTIONS } from './paperUtils';
 
 const API = 'http://localhost:8000';
 const TABS = ['Overview', 'Claims', 'Annotations'];
@@ -16,6 +16,15 @@ export default function PaperDetail({ paper, onUpdate }) {
     rating:                paper.rating ?? null,
     is_digital:            paper.is_digital ?? false,
   });
+
+  useEffect(() => {
+    setForm({
+      theoretical_framework: paper.theoretical_framework || '',
+      discipline:            paper.discipline || [],
+      rating:                paper.rating ?? null,
+      is_digital:            paper.is_digital ?? false,
+    });
+  }, [paper.paper_id, paper.rating, paper.is_digital, paper.theoretical_framework, paper.discipline]);
 
   const setField = (field, value) => setForm(f => ({ ...f, [field]: value }));
 
