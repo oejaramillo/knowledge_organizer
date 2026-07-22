@@ -11,7 +11,8 @@ from api import (
     contributors, 
     ideas,
     claims,
-    annotations
+    annotations,
+    authors
 )
 from core.database import get_db
 from core.config import settings
@@ -66,3 +67,4 @@ app.include_router(contributors.router)
 app.include_router(ideas.router)
 app.include_router(claims.router)
 app.include_router(annotations.router)
+app.include_router(authors.router)

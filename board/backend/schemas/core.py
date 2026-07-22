@@ -140,16 +140,51 @@ class BinnacleUpdate(BaseModel):
 # ==========================================
 # AUTHORS
 # ==========================================
-class AuthorResponse(BaseModel):
-    author_id:   UUID
-    full_name:   str
-    last_name:   Optional[str] = None
-    first_name:  Optional[str] = None
-    institution: Optional[str] = None
-    country:     Optional[str] = None
-    orcid:       Optional[str] = None
+class PaperSummary(BaseModel):
+    paper_id:      UUID
+    title:         str
+    year:          Optional[int]   = None
+    is_digital: Optional[bool] = False
+    date_read:  Optional[datetime] = None
+    rating:     Optional[int] = Field(None, ge=1, le=5)
+    is_read: Optional[bool] = False
+    journal: Optional[str] = None
+    volume: Optional[str] = None
+    pages: Optional[str] = None
+    url: Optional[str] = None
+
+    document_type: Optional[str]   = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class AuthorResponse(BaseModel):
+    author_id:       UUID
+    full_name:       str
+    last_name:       Optional[str] = None
+    first_name:      Optional[str] = None
+    institution:     Optional[str] = None
+    country:         Optional[str] = None
+    orcid:           Optional[str] = None
+    profile_picture: Optional[str] = None
+    webpage:         Optional[str] = None
+    contributor_id:  Optional[UUID] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AuthorDetail(AuthorResponse):
+    papers: List[PaperSummary] = []
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AuthorUpdate(BaseModel):
+    institution:     Optional[str]  = None
+    country:         Optional[str]  = None
+    profile_picture: Optional[str]  = None
+    webpage:         Optional[str]  = None
+    contributor_id:  Optional[UUID] = None
 
 
 # ==========================================

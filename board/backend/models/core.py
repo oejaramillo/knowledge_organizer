@@ -173,14 +173,25 @@ class PaperProject(Base):
 class Author(Base):
     __tablename__ = "authors"
 
-    author_id   = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    full_name   = Column(Text, nullable=False)
-    last_name   = Column(Text, nullable=True)
-    first_name  = Column(Text, nullable=True)
-    institution = Column(Text, nullable=True)
-    country     = Column(Text, nullable=True)
-    orcid       = Column(Text, unique=True, nullable=True)
-    created_at  = Column(DateTime(timezone=True), server_default=func.now())
+    author_id       = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    full_name       = Column(Text, nullable=False)
+    last_name       = Column(Text, nullable=True)
+    first_name      = Column(Text, nullable=True)
+    institution     = Column(Text, nullable=True)
+    country         = Column(Text, nullable=True)
+    orcid           = Column(Text, unique=True, nullable=True)
+    profile_picture = Column(Text, nullable=True)
+    webpage         = Column(Text, nullable=True)
+    contributor_id  = Column(UUID(as_uuid=True), ForeignKey("contributors.contributor_id", ondelete="SET NULL"), nullable=True)
+    created_at      = Column(DateTime(timezone=True), server_default=func.now())
+
+    contributor  = relationship("Contributor")
+    
+    papers = relationship(
+        "Paper",
+        secondary=paper_authors_table,
+        back_populates="authors",
+    )
 
 
 # ==========================================
@@ -243,6 +254,12 @@ class Paper(Base):
         "Annotation", 
         back_populates="paper", 
         cascade="all, delete-orphan"
+    )
+
+    authors = relationship(
+        "Author",
+        secondary=paper_authors_table,
+        back_populates="papers",
     )
 
 

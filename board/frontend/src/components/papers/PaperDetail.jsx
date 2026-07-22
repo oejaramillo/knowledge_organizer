@@ -1,8 +1,9 @@
 // src/components/papers/PaperDetail.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import PaperClaimsTab from './PaperClaimsTab';
 import PaperAnnotationsTab from './PaperAnnotationTab';
 import { DISCIPLINE_OPTIONS } from './paperUtils';
+import AuthorPopover from './AuthorPopover';
 
 const API = 'http://localhost:8000';
 const TABS = ['Overview', 'Claims', 'Annotations'];
@@ -16,6 +17,9 @@ export default function PaperDetail({ paper, onUpdate }) {
     rating:                paper.rating ?? null,
     is_digital:            paper.is_digital ?? false,
   });
+
+  const [activeAuthor, setActiveAuthor] = useState(null); // { id, ref }
+  const chipRefs = useRef({});
 
   useEffect(() => {
     setForm({
@@ -100,16 +104,36 @@ export default function PaperDetail({ paper, onUpdate }) {
               ) : (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
                   {authorsList.map(pa => (
-                    <span key={pa.author_id} style={authorChipStyle}>
+                    <span
+                      key={pa.author_id}
+                      ref={el => chipRefs.current[pa.author_id] = el}
+                      onClick={() => setActiveAuthor(
+                        activeAuthor?.id === pa.author_id ? null : { id: pa.author_id, ref: { current: chipRefs.current[pa.author_id] } }
+                      )}
+                      style={{
+                        ...authorChipStyle,
+                        cursor: 'pointer',
+                        background: activeAuthor?.id === pa.author_id ? 'var(--accent-bg)' : '#f1f5f9',
+                        borderColor: activeAuthor?.id === pa.author_id ? 'var(--accent-blue)' : 'var(--border-color)',
+                        color: activeAuthor?.id === pa.author_id ? 'var(--accent-blue)' : 'var(--text-main)',
+                      }}
+                    >
                       {pa.full_name}
                       {pa.institution && (
-                        <span style={{ color: 'var(--text-muted)', marginLeft: 4 }}>
-                          · {pa.institution}
-                        </span>
+                        <span style={{ color: 'var(--text-muted)', marginLeft: 4 }}>· {pa.institution}</span>
                       )}
                     </span>
                   ))}
                 </div>
+              )}
+
+              {/* Author popover */}
+              {activeAuthor && (
+                <AuthorPopover
+                  authorId={activeAuthor.id}
+                  anchorRef={activeAuthor.ref}
+                  onClose={() => setActiveAuthor(null)}
+                />
               )}
             </div>
 
