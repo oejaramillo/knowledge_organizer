@@ -1,5 +1,40 @@
 # knowledge_organizer
 
+## Zotero syncing
+
+Uses Zotero localapi to synchornize projects, papers, authors, attachments and annotations in that order and its relationships, it keeps track of previous synchronizations.
+
+```
+cd zotero_sync
+python sync.py
+```
+
+## AI enrichment
+
+Uses deepseek api or openai api as providers to read papers annotations or full papers and baed on that enrich the database with metadata information as discipline, theretical frameword, citation intent and language, also based on the information creates claims, concepts, methods and variables where it applies, fully robust to different types of literature, the prompt carries the paper information and ask the AI for JSON, then parsed and saved in the database.
+
+```
+cd ai_enrichments
+# Annotation-driven mode (default) — fast and cheap
+python -m ai_enrichments.enrich
+
+# Full-text mode — thorough, uses more tokens
+python -m ai_enrichments.enrich --full-text
+
+# Force re-process already processed papers
+python -m ai_enrichments.enrich --force
+
+# Process a single paper by zotero_key
+python -m ai_enrichments.enrich --key ABCD1234
+
+# Use a different provider
+python -m ai_enrichments.enrich --provider openai
+
+# Dry run — shows what would be processed, writes nothing
+python -m ai_enrichments.enrich --dry-run
+```
+
+## Board and UI for reading and editing the database
 ## Starting the backend
 ```
 cd board/backend/

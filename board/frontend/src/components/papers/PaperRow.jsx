@@ -5,7 +5,7 @@ import { formatAuthors, formatDocType } from './paperUtils';
 
 const API = 'http://localhost:8000';
 
-export default function PaperRow({ paper, isExpanded, onToggleExpand, onUpdate }) {
+export default function PaperRow({ paper, isExpanded, onToggleExpand, onUpdate, hideAuthors = false}) {
   const authors = formatAuthors(paper.authors);
   const [pickingDate, setPickingDate] = useState(false);
 
@@ -183,12 +183,14 @@ export default function PaperRow({ paper, isExpanded, onToggleExpand, onUpdate }
         </div>
 
         {/* Author */}
-        <span style={{
-          fontSize: 12, color: 'var(--text-muted)', flexShrink: 0,
-          maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-        }}>
-          {authors}
-        </span>
+        {!hideAuthors && (
+          <span style={{
+            fontSize: 12, color: 'var(--text-muted)', flexShrink: 0,
+            maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
+            {authors}
+          </span>
+        )}
 
         {/* Year */}
         <span style={{ fontSize: 12, color: 'var(--text-muted)', flexShrink: 0, width: 36, textAlign: 'right' }}>
@@ -212,8 +214,12 @@ export default function PaperRow({ paper, isExpanded, onToggleExpand, onUpdate }
 
       {/* Expanded detail */}
       {isExpanded && (
-        <div style={{ borderTop: '1px solid var(--border-color)', background: 'var(--bg-main)' }}>
-          <PaperDetail paper={paper} onUpdate={onUpdate} />
+        <div style={{ 
+          borderTop: '1px solid var(--border-color)', 
+          background: 'var(--bg-main)',
+          overflow: 'hidden',
+         }}>
+          <PaperDetail paper={paper} onUpdate={onUpdate} hideAuthors={hideAuthors} />
         </div>
       )}
     </div>

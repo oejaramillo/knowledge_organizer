@@ -8,7 +8,7 @@ import AuthorPopover from './AuthorPopover';
 const API = 'http://localhost:8000';
 const TABS = ['Overview', 'Claims', 'Annotations'];
 
-export default function PaperDetail({ paper, onUpdate }) {
+export default function PaperDetail({ paper, onUpdate, hideAuthors = false }) {
   const [activeTab, setActiveTab] = useState('Overview');
   const [saving, setSaving]       = useState(false);
   const [form, setForm]           = useState({
@@ -97,6 +97,7 @@ export default function PaperDetail({ paper, onUpdate }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
             {/* Authors */}
+            {!hideAuthors &&(
             <div>
               <label style={labelStyle}>Authors</label>
               {authorsList.length === 0 ? (
@@ -136,6 +137,7 @@ export default function PaperDetail({ paper, onUpdate }) {
                 />
               )}
             </div>
+            )}
 
             {/* Publication info */}
             <div style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.8 }}>

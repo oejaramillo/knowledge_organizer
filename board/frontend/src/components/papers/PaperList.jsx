@@ -1,5 +1,5 @@
 // src/components/papers/PaperList.jsx
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import PaperRow from './PaperRow';
 import { STATUS_OPTIONS, DOCUMENT_TYPES } from './paperUtils';
 
@@ -45,10 +45,21 @@ export default function PaperList({ paperAssociations = [] }) {
     });
 
     return list;
-  }, [localPapers, search, filterStatus, filterType, filterRead, sortBy]);
+  }, [localPapers, search, filterType, filterRead, sortBy]);
 
   const readCount  = localPapers.filter(p => p.is_read).length;
   const totalCount = localPapers.length;
+
+  const [recommendationSeed, setRecommendationSeed] = useState(0);
+
+  const unreadPapers = useMemo(() => localPapers.filter(p => !p.is_read), [localPapers]);
+
+  const recommendedPaper = useMemo(() => {
+    if (unreadPapers.length === 0) return null;
+    const idx = Math.floor(Math.random() * unreadPapers.length);
+    return unreadPapers[idx];
+  }, [unreadPapers, recommendationSeed]); // ← seed triggers a new pick
+
 
   return (
     <div className="section-panel">
@@ -75,6 +86,44 @@ export default function PaperList({ paperAssociations = [] }) {
           transition: 'width 0.3s',
         }} />
       </div>
+
+      {/* Paper recommendation */}
+      {recommendedPaper && (
+        <div style={{
+          marginBottom: 16,
+          padding: '12px 14px',
+          background: 'var(--accent-bg)',
+          border: '1px solid var(--accent-blue)',
+          borderRadius: 10,
+        }}>
+          <div style={{
+            display: 'flex', alignItems: 'center',
+            justifyContent: 'space-between', marginBottom: 8,
+          }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent-blue)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              📖 Next read:
+            </span>
+            <button
+              onClick={() => setRecommendationSeed(s => s + 1)}
+              style={{
+                fontSize: 11, padding: '2px 10px', borderRadius: 6,
+                border: '1px solid var(--accent-blue)', background: 'none',
+                color: 'var(--accent-blue)', cursor: 'pointer',
+              }}
+            >
+              🔀 Shuffle
+            </button>
+          </div>
+          <PaperRow
+            paper={recommendedPaper}
+            isExpanded={expandedId === recommendedPaper.paper_id}
+            onToggleExpand={() =>
+              setExpandedId(prev => prev === recommendedPaper.paper_id ? null : prev)
+            }
+            onUpdate={handlePaperUpdate}
+          />
+        </div>
+      )}
 
       {/* Controls */}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>

@@ -37,16 +37,29 @@ export default function AuthorPopover({ authorId, anchorRef, onClose }) {
   useEffect(() => {
     if (anchorRef?.current) {
       const rect = anchorRef.current.getBoundingClientRect();
-      const spaceBelow = window.innerHeight - rect.bottom - 12;
-      const spaceAbove = rect.top - 12;
-      const popoverHeight = Math.min(520, Math.max(spaceBelow, spaceAbove));
-      const top = spaceBelow >= 200
-        ? rect.bottom + 6
-        : rect.top - Math.min(520, spaceAbove) - 6;
+      const margin = 12;
+      const spaceBelow = window.innerHeight - rect.bottom - margin;
+      const spaceAbove = rect.top - margin;
+
+      let top, maxHeight;
+      if (spaceBelow >= 300) {
+        // Enough room below — open downward, use up to 80vh
+        top = rect.bottom + 6;
+        maxHeight = Math.min(spaceBelow, window.innerHeight * 0.82);
+      } else if (spaceAbove >= 300) {
+        // Flip upward
+        maxHeight = Math.min(spaceAbove, window.innerHeight * 0.82);
+        top = rect.top - maxHeight - 6;
+      } else {
+        // Neither side has enough — center it vertically in viewport
+        maxHeight = window.innerHeight * 0.85;
+        top = Math.max(margin, (window.innerHeight - maxHeight) / 2);
+      }
+
       setPos({
         top,
-        left: Math.min(rect.left + window.scrollX, window.innerWidth - 620),
-        maxHeight: popoverHeight,
+        left: Math.max(margin, Math.min(rect.left, window.innerWidth - 620 - margin)),
+        maxHeight,
       });
     }
   }, [anchorRef]);
@@ -83,7 +96,7 @@ export default function AuthorPopover({ authorId, anchorRef, onClose }) {
         if (
         popoverRef.current && !popoverRef.current.contains(e.target) &&
         anchorRef?.current && !anchorRef.current.contains(e.target) &&
-        suggestionsRef.current && !suggestionsRef.current.contains(e.target)  // ← add this
+        (!suggestionsRef.current || !suggestionsRef.current.contains(e.target))  // null-safe
         ) onClose();
     };
     document.addEventListener('mousedown', handler);
@@ -122,6 +135,7 @@ export default function AuthorPopover({ authorId, anchorRef, onClose }) {
         borderRadius: 12,
         boxShadow: '0 8px 32px rgba(0,0,0,0.14)',
         overflow: 'hidden',
+        minHeight: 0,
       }}
     >
       {loading ? (
@@ -259,6 +273,8 @@ export default function AuthorPopover({ authorId, anchorRef, onClose }) {
           {/* ── Papers list (scrollable) ── */}
           <div style={{
             padding: '12px 16px', overflowY: 'auto', flex: 1,
+            minHeight: 0,
+            overscrollBehavior: 'contain',
             display: 'flex', flexDirection: 'column', gap: 8,
           }}>
             <div style={sectionHeaderStyle}>
@@ -271,6 +287,7 @@ export default function AuthorPopover({ authorId, anchorRef, onClose }) {
               <PaperRow
                 key={paper.paper_id}
                 paper={paper}
+                hideAuthors={true}
                 isExpanded={expandedId === paper.paper_id}
                 onToggleExpand={() => setExpandedId(id => id === paper.paper_id ? null : paper.paper_id)}
                 onUpdate={(id, fields) =>
