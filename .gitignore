@@ -5,6 +5,8 @@ zotero_sync/__pycache__
 ai_enrichments/__pycache__
 ai_enrichments/providers/__pycache__
 zotero_sync/__pycache__
+zotero_sync/__pycache__
+zotero_sync/__pycache__/zotero_client.cpython-312.pyc
 
 # Dependency directories
 node_modules/

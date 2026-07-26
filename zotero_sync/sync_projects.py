@@ -25,14 +25,12 @@ def sync_projects(client, since=None, since_date=None):
                     """
                     INSERT INTO projects (
                         zotero_collection_key,
-                        name,
-                        description
+                        name
                     )
-                    VALUES (%s, %s, %s)
+                    VALUES (%s, %s)
                     ON CONFLICT (zotero_collection_key)
                     DO UPDATE SET
                         name = EXCLUDED.name,
-                        description = EXCLUDED.description,
                         updated_at = NOW()
                     """,
                     (
