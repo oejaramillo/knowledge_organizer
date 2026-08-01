@@ -16,6 +16,14 @@ class ContributorBase(BaseModel):
     site: Optional[str] = None
 
 
+class ContributorUpdate(BaseModel):
+    name:  Optional[str] = None
+    email: Optional[str] = None
+    role:  Optional[str] = None
+    country: Optional[str] = None
+    site:  Optional[str] = None
+
+
 class ContributorCreate(ContributorBase):
     pass
 

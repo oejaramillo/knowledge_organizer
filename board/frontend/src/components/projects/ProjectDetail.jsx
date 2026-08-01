@@ -16,6 +16,9 @@ export default function ProjectDetail() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [activeSection, setActiveSection] = useState(null);
+  const [editingContributor, setEditingContributor] = useState(null);
+  const [editForm, setEditForm] = useState({});
+  const [editSaving, setEditSaving] = useState(false);
 
   const openSection = (section) => {
     setActiveSection((prev) => (prev === section ? null : section));
@@ -118,6 +121,34 @@ export default function ProjectDetail() {
     setShowForm(false);
   };
 
+  const handleUnlink = async (contributorId) => {
+    if (!confirm('Remove this contributor from the project?')) return;
+    await apiClient.delete(`/projects/${project_id}/contributors/${contributorId}`);
+    fetchProject();
+  };
+
+  const startEdit = (pc) => {
+    setEditingContributor(pc.contributor.contributor_id);
+    setEditForm({
+      name: pc.contributor.name,
+      email: pc.contributor.email ?? '',
+      site: pc.contributor.site ?? '',
+      project_role: pc.project_role ?? '',
+    });
+  };
+
+  const handleEditSave = async (contributorId) => {
+    setEditSaving(true);
+    await apiClient.patch(`/contributors/${contributorId}`, {
+      name: editForm.name,
+      email: editForm.email || null,
+      site: editForm.site || null,
+    });
+    setEditingContributor(null);
+    setEditSaving(false);
+    fetchProject();
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
@@ -144,8 +175,6 @@ export default function ProjectDetail() {
         contributor_id: contributorId,
         project_role: form.project_role || null,
       });
-
-      if (!linkRes.ok) throw new Error("Failed to link contributor to project");
 
       resetForm();
       fetchProject();
@@ -348,25 +377,78 @@ export default function ProjectDetail() {
           <ul className="task-list">
             {contributors.map((pc) => {
               const c = pc.contributor;
+              const isEditing = editingContributor === c.contributor_id;
               return (
                 <li key={c.contributor_id} className="task-item">
-                  <div className="task-item__header">
-                    {c.site ? (
-                      <a href={c.site} target="_blank" rel="noreferrer"
-                        style={{ fontWeight: 600, color: "var(--accent-blue)", textDecoration: "none" }}>
-                        {c.name}
-                      </a>
-                    ) : (
-                      <span style={{ fontWeight: 600 }}>{c.name}</span>
-                    )}
-                    {pc.project_role && <span className="keyword-tag">{pc.project_role}</span>}
-                    {c.email && (
-                      <a href={`mailto:${c.email}`}
-                        style={{ fontSize: "13px", color: "var(--text-muted)", textDecoration: "none", marginLeft: "auto" }}>
-                        ✉ {c.email}
-                      </a>
-                    )}
-                  </div>
+                  {isEditing ? (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, padding: '8px 0' }}>
+                      {[
+                        { key: 'name', placeholder: 'Name *', type: 'text' },
+                        { key: 'project_role', placeholder: 'Role', type: 'text' },
+                        { key: 'email', placeholder: 'Email', type: 'email' },
+                        { key: 'site', placeholder: 'Website', type: 'url' },
+                      ].map(({ key, placeholder, type }) => (
+                        <input
+                          key={key}
+                          type={type}
+                          placeholder={placeholder}
+                          value={editForm[key]}
+                          onChange={e => setEditForm(f => ({ ...f, [key]: e.target.value }))}
+                          style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border-color)', fontSize: 13 }}
+                        />
+                      ))}
+                      <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 8 }}>
+                        <button
+                          onClick={() => handleEditSave(c.contributor_id)}
+                          disabled={editSaving}
+                          style={{ padding: '5px 14px', borderRadius: 8, border: 'none', background: 'var(--accent-blue)', color: 'white', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                        >
+                          {editSaving ? 'Saving…' : 'Save'}
+                        </button>
+                        <button
+                          onClick={() => setEditingContributor(null)}
+                          style={{ padding: '5px 14px', borderRadius: 8, border: '1px solid var(--border-color)', background: 'transparent', fontSize: 12, cursor: 'pointer' }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="task-item__header">
+                      {c.site ? (
+                        <a href={c.site} target="_blank" rel="noreferrer"
+                          style={{ fontWeight: 600, color: 'var(--accent-blue)', textDecoration: 'none' }}>
+                          {c.name}
+                        </a>
+                      ) : (
+                        <span style={{ fontWeight: 600 }}>{c.name}</span>
+                      )}
+                      {pc.project_role && <span className="keyword-tag">{pc.project_role}</span>}
+                      {c.email && (
+                        <a href={`mailto:${c.email}`}
+                          style={{ fontSize: 13, color: 'var(--text-muted)', textDecoration: 'none', marginLeft: 'auto' }}>
+                          ✉ {c.email}
+                        </a>
+                      )}
+                      {/* Edit / Unlink buttons */}
+                      <div style={{ display: 'flex', gap: 6, marginLeft: 'auto' }}>
+                        <button
+                          onClick={() => startEdit(pc)}
+                          title="Edit"
+                          style={{ background: 'none', border: '1px solid var(--border-color)', borderRadius: 6, padding: '2px 8px', fontSize: 12, cursor: 'pointer', color: 'var(--text-muted)' }}
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          onClick={() => handleUnlink(c.contributor_id)}
+                          title="Remove from project"
+                          style={{ background: 'none', border: '1px solid #fca5a5', borderRadius: 6, padding: '2px 8px', fontSize: 12, cursor: 'pointer', color: '#ef4444' }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </li>
               );
             })}

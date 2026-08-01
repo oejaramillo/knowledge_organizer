@@ -135,3 +135,18 @@ def add_contributor_to_project(
     db.commit()
     db.refresh(link)
     return link
+
+@router.delete("/{project_id}/contributors/{contributor_id}", status_code=204)
+def remove_contributor_from_project(
+    project_id: UUID,
+    contributor_id: UUID,
+    db: Session = Depends(get_db)
+):
+    link = db.query(ProjectContributor).filter_by(
+        project_id=project_id,
+        contributor_id=contributor_id
+    ).first()
+    if not link:
+        raise HTTPException(status_code=404, detail="Contributor not in project")
+    db.delete(link)
+    db.commit()

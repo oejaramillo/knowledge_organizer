@@ -5,13 +5,23 @@ from uuid import UUID
 
 from core.database import get_db
 from models.core import Contributor
-from schemas.core import ContributorCreate, ContributorResponse
+from schemas.core import ContributorCreate, ContributorResponse, ContributorUpdate
 
 router = APIRouter(
     prefix="/api/contributors",
     tags=["Contributors"]
 )
 
+@router.patch("/{contributor_id}", response_model=ContributorResponse)
+def update_contributor(contributor_id: UUID, patch: ContributorUpdate, db: Session = Depends(get_db)):
+    contributor = db.query(Contributor).filter(Contributor.contributor_id == contributor_id).first()
+    if not contributor:
+        raise HTTPException(status_code=404, detail="Contributor not found")
+    for k, v in patch.model_dump(exclude_unset=True).items():
+        setattr(contributor, k, v)
+    db.commit()
+    db.refresh(contributor)
+    return contributor
 
 @router.get("/", response_model=List[ContributorResponse])
 def get_contributors(db: Session = Depends(get_db)):
