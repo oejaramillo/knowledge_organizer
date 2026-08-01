@@ -5,7 +5,7 @@ from uuid import UUID
 
 from core.database import get_db
 from models.core import ProjectMeeting, Project, Contributor
-from schemas.core import MeetingCreate, MeetingResponse
+from schemas.core import MeetingCreate, MeetingResponse, MeetingUpdate
 
 router = APIRouter(
     prefix="/api/meetings", 
@@ -51,3 +51,20 @@ def delete_meeting(meeting_id: UUID, db: Session = Depends(get_db)):
     db.delete(meeting)
     db.commit()
     return None
+
+@router.patch("/{meeting_id}", response_model=MeetingResponse)
+def update_meeting(meeting_id: UUID, payload: MeetingUpdate, db: Session = Depends(get_db)):
+    meeting = db.query(ProjectMeeting).filter(ProjectMeeting.meeting_id == meeting_id).first()
+    if not meeting:
+        raise HTTPException(status_code=404, detail="Meeting not found")
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        if field == "participant_ids":
+            contributors = db.query(Contributor).filter(
+                Contributor.contributor_id.in_(value)
+            ).all()
+            meeting.participants = contributors
+        else:
+            setattr(meeting, field, value)
+    db.commit()
+    db.refresh(meeting)
+    return meeting

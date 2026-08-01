@@ -101,6 +101,12 @@ class MeetingBase(BaseModel):
 class MeetingCreate(MeetingBase):
     participant_ids: List[UUID] = []
 
+class MeetingUpdate(BaseModel):
+    title:           Optional[str] = None
+    meeting_date:    Optional[datetime] = None
+    summary:         Optional[str] = None
+    participant_ids: Optional[List[UUID]] = None
+
 class MeetingResponse(MeetingBase):
     meeting_id: UUID
     created_at: Optional[datetime] = None
