@@ -1,12 +1,12 @@
 import { Outlet } from 'react-router-dom'
-import ProjectList from '../components/projects/ProjectList'
+import ProjectTreeNav from '../components/projects/ProjectTreeNav';
 
 export default function MainLayout({ projectType, onToggle }) {
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
 
       {/* Left pane */}
-      <aside className="w-64 border-r border-slate-200 flex flex-col">
+      <aside className="w-64 border-r border-slate-200 flex flex-col overflow-y-auto">
         {/* Toggle */}
         <div style={{ display: 'flex', gap: 6, padding: '10px 12px', borderBottom: '1px solid var(--border-color)' }}>
           {['research', 'collection'].map(type => (
@@ -32,11 +32,14 @@ export default function MainLayout({ projectType, onToggle }) {
           ))}
         </div>
 
-        {/* Project list filtered by type */}
-        <ProjectList projectType={projectType} />
+        {/* Project tree */}
+        <div style={{ padding: '12px 16px 4px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>
+          Projects
+        </div>
+        <ProjectTreeNav projectType={projectType} />
       </aside>
 
-      {/* RIGHT PANE — changes based on route */}
+      {/* RIGHT PANE */}
       <main className="flex-1 overflow-y-auto">
         <Outlet />
       </main>

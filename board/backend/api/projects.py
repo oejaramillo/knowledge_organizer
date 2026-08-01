@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, selectinload
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 
 from core.database import get_db
@@ -31,11 +31,17 @@ router = APIRouter(
 )
 
 @router.get("/", response_model=List[ProjectResponse])
-def get_all_projects(db: Session = Depends(get_db)):
+def get_all_projects(
+    project_type: Optional[str] = None,
+    db: Session = Depends(get_db)
+    ):
     """
     Fetch a lightweight list of all projects.
     """
-    projects = db.query(Project).all()
+    query = db.query(Project)
+    if project_type:
+        query = query.filter(Project.project_type == project_type)
+    projects = query.all()
     return projects
 
 @router.patch("/{project_id}", response_model=ProjectResponse)

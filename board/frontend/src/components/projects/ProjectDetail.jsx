@@ -5,8 +5,8 @@ import MeetingList from "../meetings/MeetingList";
 import BinnacleList from "../binnacle/BinnacleList";
 import PaperList from '../papers/PaperList';
 import TaskList from "../tasks/TaskList";
+import apiClient from '../../api/client'
 
-const API = "http://localhost:8000";
 
 export default function ProjectDetail() {
   const { project_id } = useParams();
@@ -31,18 +31,16 @@ export default function ProjectDetail() {
   const suggestionsRef = useRef(null);
 
   const fetchProject = () => {
-    fetch(`${API}/api/projects/${project_id}`)
-      .then((res) => res.json())
-      .then((data) => { setProject(data); setLoading(false); })
+    apiClient.get(`/projects/${project_id}`)
+      .then((response) => { setProject(response.data); setLoading(false); })
       .catch(() => setLoading(false));
   };
 
   // Load all contributors once when form opens
   useEffect(() => {
     if (showForm) {
-      fetch(`${API}/api/contributors/`)
-        .then((res) => res.json())
-        .then(setAllContributors)
+      apiClient.get('/contributors/')
+        .then((response) => setAllContributors(response.data))
         .catch(() => {});
     }
   }, [showForm]);
@@ -102,10 +100,8 @@ export default function ProjectDetail() {
   const handleTypeToggle = async (newType) => {
     if (newType === project?.project_type) return;
     setSavingType(true);
-    await fetch(`${API}/api/projects/${project_id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ project_type: newType }),
+    await apiClient.patch(`/projects/${project_id}`, {
+      project_type: newType
     });
     setSavingType(false);
     fetchProject();
@@ -135,28 +131,18 @@ export default function ProjectDetail() {
         contributorId = selectedContributor.contributor_id;
       } else {
         // Create new contributor
-        const res = await fetch(`${API}/api/contributors/`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: form.name,
-            email: form.email || null,
-            site: form.site || null,
-          }),
+        const created = await apiClient.post('/contributors/', {
+          name: form.name,
+          email: form.email || null,
+          site: form.site || null,
         });
-        if (!res.ok) throw new Error("Failed to create contributor");
-        const created = await res.json();
         contributorId = created.contributor_id;
       }
 
       // Link to project
-      const linkRes = await fetch(`${API}/api/projects/${project_id}/contributors`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contributor_id: contributorId,
-          project_role: form.project_role || null,
-        }),
+      await apiClient.post(`/projects/${project_id}/contributors`, {
+        contributor_id: contributorId,
+        project_role: form.project_role || null,
       });
 
       if (!linkRes.ok) throw new Error("Failed to link contributor to project");
