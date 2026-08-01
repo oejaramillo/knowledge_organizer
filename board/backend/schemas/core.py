@@ -220,6 +220,7 @@ class PaperBase(BaseModel):
     date_read:  Optional[datetime] = None
     rating:     Optional[int] = Field(None, ge=1, le=5)
     is_digital: Optional[bool] = False
+    is_print: Optional[bool] = False
     notes: Optional[str] = None
     
     document_type: Optional[str] = "journal_article"

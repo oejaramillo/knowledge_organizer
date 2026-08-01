@@ -216,6 +216,7 @@ class Paper(Base):
     date_read  = Column(DateTime(timezone=True), nullable=True)
     rating     = Column(SmallInteger, nullable=True)   # 1–5, NULL = unrated
     is_digital = Column(Boolean, default=False)
+    is_print   = Column(Boolean, default=False)
     notes = Column(Text, nullable=True)
 
     document_type = Column(Text, default="journal_article")

@@ -2,10 +2,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import PaperClaimsTab from './PaperClaimsTab';
 import PaperAnnotationsTab from './PaperAnnotationTab';
-import { DISCIPLINE_OPTIONS } from './paperUtils';
 import AuthorPopover from './AuthorPopover';
+import apiClient from '../../api/client'
 
-const API = 'http://localhost:8000';
 const TABS = ['Overview', 'Claims', 'Annotations'];
 
 export default function PaperDetail({ paper, onUpdate, hideAuthors = false }) {
@@ -16,6 +15,7 @@ export default function PaperDetail({ paper, onUpdate, hideAuthors = false }) {
     discipline:            paper.discipline || [],
     rating:                paper.rating ?? null,
     is_digital:            paper.is_digital ?? false,
+    is_print:              paper.is_print ?? false,
   });
 
   const [activeAuthor, setActiveAuthor] = useState(null); // { id, ref }
@@ -27,8 +27,9 @@ export default function PaperDetail({ paper, onUpdate, hideAuthors = false }) {
       discipline:            paper.discipline || [],
       rating:                paper.rating ?? null,
       is_digital:            paper.is_digital ?? false,
+      is_print:              paper.is_print ?? false,
     });
-  }, [paper.paper_id, paper.rating, paper.is_digital, paper.theoretical_framework, paper.discipline]);
+  }, [paper.paper_id, paper.rating, paper.is_digital, paper.is_print, paper.theoretical_framework, paper.discipline]);
 
   const setField = (field, value) => setForm(f => ({ ...f, [field]: value }));
 
@@ -45,13 +46,7 @@ export default function PaperDetail({ paper, onUpdate, hideAuthors = false }) {
   const save = async () => {
     setSaving(true);
     try {
-      const res = await fetch(`${API}/api/papers/${paper.paper_id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
-      if (!res.ok) throw new Error('Save failed');
-      const updated = await res.json();
+      const { data: updated } = await apiClient.patch(`/papers/${paper.paper_id}`, form);
       onUpdate(paper.paper_id, updated);
     } catch (err) {
       console.error(err);
@@ -212,20 +207,23 @@ export default function PaperDetail({ paper, onUpdate, hideAuthors = false }) {
               </div>
             </div>
 
-            {/* Is Digital */}
+            {/* Format */}
             <div>
               <label style={labelStyle}>Format</label>
               <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-                {[{ val: true, label: '💾 Digital (PDF)' }, { val: false, label: '📖 Physical' }].map(opt => (
+                {[
+                  { field: 'is_digital', label: '💾 Digital (PDF)' },
+                  { field: 'is_print',   label: '📖 Physical' },
+                ].map(opt => (
                   <button
-                    key={String(opt.val)}
-                    onClick={() => setField('is_digital', opt.val)}
+                    key={opt.field}
+                    onClick={() => setField(opt.field, !form[opt.field])}
                     style={{
                       padding: '5px 14px', fontSize: 12, borderRadius: 999,
-                      border: `1px solid ${form.is_digital === opt.val ? 'var(--accent-blue)' : 'var(--border-color)'}`,
-                      background: form.is_digital === opt.val ? 'var(--accent-bg)' : 'transparent',
-                      color: form.is_digital === opt.val ? 'var(--accent-blue)' : 'var(--text-muted)',
-                      cursor: 'pointer', fontWeight: form.is_digital === opt.val ? 600 : 400,
+                      border: `1px solid ${form[opt.field] ? 'var(--accent-blue)' : 'var(--border-color)'}`,
+                      background: form[opt.field] ? 'var(--accent-bg)' : 'transparent',
+                      color: form[opt.field] ? 'var(--accent-blue)' : 'var(--text-muted)',
+                      cursor: 'pointer', fontWeight: form[opt.field] ? 600 : 400,
                       transition: 'all 0.12s',
                     }}
                   >
@@ -238,27 +236,21 @@ export default function PaperDetail({ paper, onUpdate, hideAuthors = false }) {
             {/* Theoretical Framework */}
             <div>
               <label style={labelStyle}>Theoretical Framework</label>
-              <input
-                className="form-input"
-                value={form.theoretical_framework}
-                onChange={e => setField('theoretical_framework', e.target.value)}
-                placeholder="e.g. New Institutional Economics"
-              />
+              <p style={{ fontSize: 13, color: 'var(--text-main)', margin: '4px 0 0', lineHeight: 1.6 }}>
+                {paper.theoretical_framework || <span style={{ color: 'var(--text-muted)' }}>—</span>}
+              </p>
             </div>
 
             {/* Discipline */}
             <div>
               <label style={labelStyle}>Discipline</label>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
-                {DISCIPLINE_OPTIONS.map(d => (
-                  <button
-                    key={d}
-                    onClick={() => toggleArray('discipline', d)}
-                    style={tagToggleStyle(form.discipline?.includes(d))}
-                  >
-                    {d}
-                  </button>
-                ))}
+                {form.discipline?.length > 0
+                  ? form.discipline.map(d => (
+                      <span key={d} style={tagToggleStyle(true)}>{d}</span>
+                    ))
+                  : <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>—</span>
+                }
               </div>
             </div>
 

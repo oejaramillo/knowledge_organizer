@@ -96,32 +96,35 @@ export default function PaperList({ paperAssociations = [] }) {
           border: '1px solid var(--accent-blue)',
           borderRadius: 10,
         }}>
-          <div style={{
-            display: 'flex', alignItems: 'center',
-            justifyContent: 'space-between', marginBottom: 8,
-          }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
             <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent-blue)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               📖 Next read:
             </span>
             <button
               onClick={() => setRecommendationSeed(s => s + 1)}
-              style={{
-                fontSize: 11, padding: '2px 10px', borderRadius: 6,
-                border: '1px solid var(--accent-blue)', background: 'none',
-                color: 'var(--accent-blue)', cursor: 'pointer',
-              }}
+              style={{ fontSize: 11, padding: '2px 10px', borderRadius: 6, border: '1px solid var(--accent-blue)', background: 'none', color: 'var(--accent-blue)', cursor: 'pointer' }}
             >
               🔀 Shuffle
             </button>
           </div>
-          <PaperRow
-            paper={recommendedPaper}
-            isExpanded={expandedId === recommendedPaper.paper_id}
-            onToggleExpand={() =>
-              setExpandedId(prev => prev === recommendedPaper.paper_id ? null : prev)
-            }
-            onUpdate={handlePaperUpdate}
-          />
+
+          {/* Simple summary row — no expand, no actions */}
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+            <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-main)', flex: 1 }}>
+              {recommendedPaper.title}
+            </span>
+            {recommendedPaper.authors?.length > 0 && (
+              <span style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                {recommendedPaper.authors.map(a => a.last_name).join(', ')}
+                {recommendedPaper.authors.length > 2 ? ' et al.' : ''}
+              </span>
+            )}
+            {recommendedPaper.year && (
+              <span style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                {recommendedPaper.year}
+              </span>
+            )}
+          </div>
         </div>
       )}
 

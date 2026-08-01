@@ -13,18 +13,6 @@ export const DOCUMENT_TYPES = [
   'dissertation', 'report', 'policy_document', 'historical_document', 'other',
 ];
 
-export const DISCIPLINE_OPTIONS = [
-  'economics', 'sociology', 'philosophy', 'political science',
-  'anthropology', 'history', 'psychology', 'law', 'geography', 'other',
-];
-
-export const CITATION_INTENT_OPTIONS = [
-  'motivation', 'identification', 'data', 'robustness', 'mechanism',
-  'comparison', 'theoretical_foundation', 'conceptual_definition',
-  'normative_benchmark', 'historical_context', 'stylized_fact',
-  'disciplinary_bridge', 'methodological_critique',
-];
-
 export const CLAIM_TYPES = [
   { value: 'empirical',      label: 'Empirical',      color: '#3b82f6' },
   { value: 'theoretical',    label: 'Theoretical',    color: '#8b5cf6' },
