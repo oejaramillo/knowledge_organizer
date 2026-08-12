@@ -109,21 +109,26 @@ export default function PaperList({ paperAssociations = [] }) {
           </div>
 
           {/* Simple summary row — no expand, no actions */}
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
-            <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-main)', flex: 1 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-main)', lineHeight: 1.4 }}>
               {recommendedPaper.title}
             </span>
-            {recommendedPaper.authors?.length > 0 && (
-              <span style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                {recommendedPaper.authors.map(a => a.last_name).join(', ')}
-                {recommendedPaper.authors.length > 2 ? ' et al.' : ''}
-              </span>
-            )}
-            {recommendedPaper.year && (
-              <span style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                {recommendedPaper.year}
-              </span>
-            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              {recommendedPaper.authors?.length > 0 && (
+                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                  {recommendedPaper.authors.slice(0, 2).map(a => a.last_name).join(', ')}
+                  {recommendedPaper.authors.length > 2 ? ' et al.' : ''}
+                </span>
+              )}
+              {recommendedPaper.year && (
+                <>
+                  <span style={{ fontSize: 12, color: 'var(--border-color)' }}>·</span>
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                    {recommendedPaper.year}
+                  </span>
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}

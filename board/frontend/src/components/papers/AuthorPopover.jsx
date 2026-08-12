@@ -26,12 +26,8 @@ export default function AuthorPopover({ authorId, anchorRef, onClose }) {
   const [expandedId, setExpandedId]   = useState(null);
   const [form, setForm]               = useState({});
   const [countries, setCountries]     = useState([]);
-  const [countrySuggestions, setCountrySuggestions] = useState([]);
   const popoverRef = useRef(null);
   const [pos, setPos] = useState({ top: 0, left: 0 });
-  const countryInputRef = useRef(null);
-  const [suggestionPos, setSuggestionPos] = useState({});
-  const suggestionsRef = useRef(null);
 
   // Position
   useEffect(() => {
@@ -195,52 +191,21 @@ export default function AuthorPopover({ authorId, anchorRef, onClose }) {
                   placeholder="University of..." />
               </div>
 
-              {/* Country — with autocomplete */}
-            <div style={{ position: 'relative' }}>
-            <label style={labelStyle}>Country</label>
-            <input
-                ref={countryInputRef}
-                className="form-input"
-                value={form.country}
-                onChange={e => {
-                setForm(f => ({ ...f, country: e.target.value }));
-                const q = e.target.value.toLowerCase();
-                const filtered = q.length === 0 ? [] : countries.filter(c => c.toLowerCase().includes(q));
-                if (filtered.length > 0 && countryInputRef.current) {
-                    const rect = countryInputRef.current.getBoundingClientRect();
-                    setSuggestionPos({ top: rect.bottom + 2, left: rect.left, width: rect.width });
-                }
-                setCountrySuggestions(filtered);
-                }}
-                onBlur={() => setTimeout(() => setCountrySuggestions([]), 150)}
-                placeholder="e.g. Mexico"
-            />
-            {countrySuggestions.length > 0 && (
-                <ul 
-                ref={suggestionsRef}
-                style={{
-                position: 'fixed',           /* ← fixed, not absolute */
-                top: suggestionPos.top,
-                left: suggestionPos.left,
-                width: suggestionPos.width,
-                zIndex: 9999,                /* ← above everything */
-                background: 'white',
-                border: '1px solid var(--border-color)',
-                borderRadius: 8, marginTop: 2, padding: '4px 0',
-                listStyle: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                maxHeight: 140, overflowY: 'auto',
-                }}>
-                {countrySuggestions.map(c => (
-                    <li key={c}
-                    onMouseDown={() => { setForm(f => ({ ...f, country: c })); setCountrySuggestions([]); }}
-                    style={{ padding: '7px 12px', cursor: 'pointer', fontSize: 13 }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-bg)'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'white'}
-                    >{c}</li>
-                ))}
-                </ul>
-            )}
-            </div>
+              {/* Country — native datalist autocomplete */}
+              <div>
+                <label style={labelStyle}>Country</label>
+                <input
+                  className="form-input"
+                  value={form.country}
+                  onChange={e => setForm(f => ({ ...f, country: e.target.value }))}
+                  list="country-options"
+                  placeholder="e.g. Mexico"
+                  autoComplete="off"
+                />
+                <datalist id="country-options">
+                  {countries.map(c => <option key={c} value={c} />)}
+                </datalist>
+              </div>
 
               {/* Webpage */}
               <div>

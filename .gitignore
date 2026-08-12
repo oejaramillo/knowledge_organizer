@@ -8,6 +8,8 @@ zotero_sync/__pycache__
 zotero_sync/__pycache__
 zotero_sync/__pycache__/zotero_client.cpython-312.pyc
 
+Justfile
+
 # Dependency directories
 node_modules/
 venv/
