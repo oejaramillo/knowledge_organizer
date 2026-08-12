@@ -16,12 +16,8 @@ from api import (
 )
 from core.database import get_db
 from core.config import settings
+from routers import tools
 
-#from api.projects import projects
-#from api.tasks import tasks
-#from api.papers import papers
-#from api.meetings import meetings
-#from api.binnacle import binnacle
 
 app = FastAPI(title=settings.PROJECT_TITLE)
 
@@ -68,3 +64,4 @@ app.include_router(ideas.router)
 app.include_router(claims.router)
 app.include_router(annotations.router)
 app.include_router(authors.router)
+app.include_router(tools.router)
