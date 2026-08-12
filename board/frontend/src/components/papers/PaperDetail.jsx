@@ -136,6 +136,7 @@ export default function PaperDetail({ paper, onUpdate, hideAuthors = false }) {
 
             {/* Publication info */}
             <div style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.8 }}>
+              {paper.zotero_key && <div><strong>Zotero Key:</strong> {paper.zotero_key}</div>}
               {paper.journal && <div><strong>Journal:</strong> {paper.journal}</div>}
               {paper.volume  && <div><strong>Volume:</strong> {paper.volume}{paper.issue ? `, Issue ${paper.issue}` : ''}</div>}
               {paper.pages   && <div><strong>Pages:</strong> {paper.pages}</div>}

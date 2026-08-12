@@ -1,7 +1,8 @@
 from datetime import datetime, timezone
+import argparse
 
 from zotero_client import ZoteroClient
-from db import get_sync_state, save_sync_state
+from db import get_db_connection, get_sync_state, save_sync_state
 from sync_projects import sync_projects
 from sync_papers import sync_papers
 from sync_authors import sync_authors
@@ -9,7 +10,19 @@ from sync_attachments import sync_attachments
 from sync_annotations import sync_annotations
 
 
+def reset_sync_state():
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("UPDATE sync_state SET last_library_version = NULL, last_sync = NULL")
+        conn.commit()
+    print("Sync state reset — will run full sync.")
+
+
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--force', action='store_true', help='Force full re-sync of all data')
+    args = parser.parse_args()
+
     client = ZoteroClient()
 
     info = client.get_library_info()
@@ -17,6 +30,9 @@ def main():
 
     print(f"Connected to Zotero (API v{info['api_version']})")
     print(f"Current library version: {current_version or 'N/A (local API)'}")
+
+    if args.force:
+        reset_sync_state()
 
     state = get_sync_state()
     last_version = state["last_library_version"]
@@ -38,8 +54,6 @@ def main():
         print(f"Incremental sync: changes since {since_date} (timestamp fallback)")
         since_version = None
 
-    # Capture sync start time before reading data.
-    # This avoids missing updates that happen during the sync run.
     sync_started_at = datetime.now(timezone.utc)
 
     sync_projects(client, since=since_version, since_date=since_date)

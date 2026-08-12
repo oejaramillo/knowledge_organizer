@@ -6,13 +6,19 @@ import subprocess, sys, os
 router = APIRouter(prefix="/api/tools", tags=["Tools"])
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../"))
 
+class SyncOptions(BaseModel):
+    force: bool = False
+
 @router.post("/zotero-sync")
-def run_zotero_sync():
+def run_zotero_sync(opts: SyncOptions):
+    args = [sys.executable, "sync.py"]
+    if opts.force:
+        args.append("--force")
     try:
         result = subprocess.run(
-            [sys.executable, "sync.py"],
+            args,
             cwd=os.path.join(ROOT, "zotero_sync"),
-            capture_output=True, text=True, timeout=120,
+            capture_output=True, text=True, timeout=300,
         )
         return { "ok": result.returncode == 0, "output": result.stdout, "error": result.stderr }
     except Exception as e:

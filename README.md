@@ -6,7 +6,12 @@ Uses Zotero localapi to synchornize projects, papers, authors, attachments and a
 
 ```
 cd zotero_sync
+
+# NOrmal sync just for new information
 python sync.py
+
+# Force entire syncinc overwritting data
+python sync.py --force
 ```
 
 ## AI enrichment
