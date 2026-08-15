@@ -1,38 +1,88 @@
-"""
-Parses the raw JSON string returned by the AI provider
-into clean Python dicts ready for the database writer.
-"""
+# ============================================================================
+# AI ENRICHMENT PIPELINE - RESPONSE PARSER
+# ============================================================================
+# This module parses and validates raw JSON responses from AI providers,
+# converting them into clean, database-ready Python dictionaries.
+#
+# KEY RESPONSIBILITIES:
+# 1. Parse JSON responses (handling markdown fences)
+# 2. Validate response structure and required fields
+# 3. Clean and normalize data types for database insertion
+# 4. Validate field values against allowed constants
+# 5. Provide safe type conversion with fallbacks
+#
+# ERROR HANDLING:
+# - Gracefully handle malformed JSON responses
+# - Validate all enum/choice fields against allowed values
+# - Provide safe defaults for missing or invalid data
+# - Convert types safely with appropriate fallbacks
+# ============================================================================
 
 import json
 
 
 class ParseError(Exception):
+    """
+    Custom exception for AI response parsing failures.
+    
+    Raised when AI responses cannot be parsed due to:
+    - Invalid JSON format
+    - Missing required fields
+    - Malformed response structure
+    """
     pass
 
 
 def parse_response(raw: str) -> dict:
     """
-    Parses the AI's JSON response.
-    Handles the case where the model wraps JSON in markdown fences.
+    Parse AI provider's raw response string into structured Python dict.
+     - Fully AI - 
+    Handles common issues with AI-generated JSON responses:
+    - Markdown code fence wrapping (```json ... ```)
+    - Extra whitespace and formatting issues
+    - Missing required top-level keys
+    
+    Args:
+        raw (str): Raw response string from AI provider
+    
+    Returns:
+        dict: Parsed and validated response with required structure
+    
+    Raises:
+        ParseError: If JSON is invalid or missing required keys
+    
+    Expected Response Structure:
+        {
+            "paper_meta": {...},
+            "claims": [...],
+            "concepts": [...], 
+            "methods": [...],
+            "variables": [...]
+        }
     """
     text = raw.strip()
 
-    # Strip markdown code fences if present
+    # ── HANDLE MARKDOWN CODE FENCES ──────────────────────────────────────────
+    # AI models sometimes wrap JSON in markdown code blocks
+    # Remove these fences to get clean JSON
     if text.startswith("```"):
         lines = text.splitlines()
-        # Remove first and last fence lines
+        # Filter out lines that are just markdown fences
         inner = [
             line for line in lines
             if not line.strip().startswith("```")
         ]
         text = "\n".join(inner).strip()
 
+    # ── JSON PARSING ──────────────────────────────────────────────────────────
     try:
         data = json.loads(text)
     except json.JSONDecodeError as exc:
+        # Provide helpful error with truncated raw response for debugging
         raise ParseError(f"AI returned invalid JSON: {exc}\n\nRaw:\n{raw[:500]}")
 
-    # Validate top-level keys
+    # ── VALIDATE REQUIRED STRUCTURE ──────────────────────────────────────────
+    # Ensure all required top-level keys are present
     required = {"paper_meta", "claims", "concepts", "methods", "variables"}
     missing = required - set(data.keys())
     if missing:
@@ -41,7 +91,18 @@ def parse_response(raw: str) -> dict:
     return data
 
 
+# ── SAFE TYPE CONVERSION UTILITIES ─────────────────────────────────────────
+
 def safe_str(value) -> str | None:
+    """
+    Safely convert value to string, handling None and empty strings.
+    
+    Args:
+        value: Any value to convert
+        
+    Returns:
+        str | None: Clean string or None if empty/null
+    """
     if value is None:
         return None
     s = str(value).strip()
@@ -49,6 +110,15 @@ def safe_str(value) -> str | None:
 
 
 def safe_float(value) -> float | None:
+    """
+    Safely convert value to float, returning None for invalid values.
+    
+    Args:
+        value: Any value to convert
+        
+    Returns:
+        float | None: Float value or None if conversion fails
+    """
     if value is None:
         return None
     try:
@@ -58,6 +128,15 @@ def safe_float(value) -> float | None:
 
 
 def safe_int(value) -> int | None:
+    """
+    Safely convert value to integer, returning None for invalid values.
+    
+    Args:
+        value: Any value to convert
+        
+    Returns:
+        int | None: Integer value or None if conversion fails
+    """
     if value is None:
         return None
     try:
@@ -67,40 +146,89 @@ def safe_int(value) -> int | None:
 
 
 def safe_list(value) -> list:
+    """
+    Safely convert value to list of strings, filtering out None values.
+    
+    Args:
+        value: Any value to convert (expected to be list)
+        
+    Returns:
+        list: Clean list of strings, empty list if input invalid
+    """
     if isinstance(value, list):
         return [str(v) for v in value if v is not None]
     return []
 
 
+# ── VALIDATION CONSTANTS ───────────────────────────────────────────────────
+# These constants define allowed values for various fields to ensure
+# database consistency and enable proper filtering/analysis based in my experience and field
+
 VALID_CLAIM_TYPES = {
-    "empirical", "theoretical", "conceptual",
-    "historical", "normative", "methodological",
+    "empirical",        # Quantitative findings and statistical results
+    "theoretical",      # Formal model propositions and theoretical predictions
+    "conceptual",       # Definitions, frameworks, and conceptual arguments
+    "historical",       # Historical interpretations and contextual claims
+    "normative",        # Value judgments and policy recommendations
+    "methodological",   # Arguments about research design and methodology
 }
 
 VALID_DIRECTIONS = {
-    "positive", "negative", "null", "mixed", "unclear",
+    "positive",    # Positive effect or relationship
+    "negative",    # Negative effect or relationship  
+    "null",        # No significant effect
+    "mixed",       # Mixed or conditional effects
+    "unclear",     # Ambiguous or uncertain direction
 }
 
 VALID_PARADIGMS = {
-    "quantitative", "qualitative", "theoretical",
-    "mixed", "historical", "philosophical",
+    "quantitative",   # Statistical and econometric approaches
+    "qualitative",    # Interpretive and ethnographic approaches
+    "theoretical",    # Formal modeling and axiomatic approaches
+    "mixed",          # Combined quantitative and qualitative methods
+    "historical",     # Historical and archival approaches
+    "philosophical",  # Conceptual and normative analysis
 }
 
 VALID_CONCEPT_ROLES = {
-    "introduces", "applies", "critiques", "extends", "operationalizes",
+    "introduces",       # Paper coins or first defines the concept
+    "applies",          # Paper uses existing concept in analysis
+    "critiques",        # Paper challenges or questions the concept
+    "extends",          # Paper builds upon or expands the concept
+    "operationalizes",  # Paper converts concept into measurable variables
 }
 
 VALID_VARIABLE_ROLES = {
-    "outcome", "treatment", "control",
-    "instrument", "moderator", "mediator",
+    "outcome",      # Dependent variable being explained
+    "treatment",    # Main independent variable of interest
+    "control",      # Control variables for robustness
+    "instrument",   # Instrumental variables for identification
+    "moderator",    # Variables that modify treatment effects
+    "mediator",     # Variables that explain causal mechanisms
 }
 
 
+# ── FIELD CLEANING AND VALIDATION FUNCTIONS ───────────────────────────────
+
 def clean_claim(raw: dict) -> dict:
+    """
+    Clean and validate a single claim record from AI response.
+    
+    Claims are the core extracted knowledge from papers - empirical findings,
+    theoretical propositions, or conceptual arguments.
+    
+    Args:
+        raw (dict): Raw claim data from AI response
+        
+    Returns:
+        dict: Cleaned claim ready for database insertion
+    """
+    # Validate and default claim type
     claim_type = safe_str(raw.get("claim_type")) or "empirical"
     if claim_type not in VALID_CLAIM_TYPES:
         claim_type = "empirical"
 
+    # Validate direction for empirical/theoretical claims
     direction = safe_str(raw.get("direction"))
     if direction not in VALID_DIRECTIONS:
         direction = None
@@ -124,6 +252,19 @@ def clean_claim(raw: dict) -> dict:
 
 
 def clean_concept(raw: dict) -> dict:
+    """
+    Clean and validate a single concept record from AI response.
+    
+    Concepts represent theoretical constructs, definitions, and frameworks
+    used in academic discourse across disciplines.
+    
+    Args:
+        raw (dict): Raw concept data from AI response
+        
+    Returns:
+        dict: Cleaned concept ready for database insertion
+    """
+    # Validate and default concept role
     role = safe_str(raw.get("role")) or "applies"
     if role not in VALID_CONCEPT_ROLES:
         role = "applies"
@@ -139,6 +280,19 @@ def clean_concept(raw: dict) -> dict:
 
 
 def clean_method(raw: dict) -> dict:
+    """
+    Clean and validate a single method record from AI response.
+    
+    Methods represent research methodologies, analytical techniques,
+    and empirical approaches used across research paradigms.
+    
+    Args:
+        raw (dict): Raw method data from AI response
+        
+    Returns:
+        dict: Cleaned method ready for database insertion
+    """
+    # Validate paradigm classification
     paradigm = safe_str(raw.get("paradigm"))
     if paradigm not in VALID_PARADIGMS:
         paradigm = None
@@ -153,6 +307,19 @@ def clean_method(raw: dict) -> dict:
 
 
 def clean_variable(raw: dict) -> dict:
+    """
+    Clean and validate a single variable record from AI response.
+    
+    Variables represent quantitative measures and operationalized
+    concepts used in empirical research.
+    
+    Args:
+        raw (dict): Raw variable data from AI response
+        
+    Returns:
+        dict: Cleaned variable ready for database insertion
+    """
+    # Validate and default variable role
     role = safe_str(raw.get("role"))
     if role not in VALID_VARIABLE_ROLES:
         role = "outcome"
@@ -167,6 +334,19 @@ def clean_variable(raw: dict) -> dict:
 
 
 def clean_paper_meta(raw: dict) -> dict:
+    """
+    Clean and validate paper metadata from AI response.
+    
+    Paper metadata includes disciplinary classification, theoretical
+    frameworks, and citation context that provides high-level
+    categorization for the paper.
+    
+    Args:
+        raw (dict): Raw paper metadata from AI response
+        
+    Returns:
+        dict: Cleaned metadata ready for database update
+    """
     return {
         "discipline":           safe_list(raw.get("discipline")),
         "theoretical_framework":safe_str(raw.get("theoretical_framework")),

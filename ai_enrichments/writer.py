@@ -1,8 +1,25 @@
-"""
-Writes parsed AI output to PostgreSQL.
-All writes are idempotent — safe to re-run.
-"""
+# ============================================================================
+# AI ENRICHMENT PIPELINE - DATABASE WRITER
+# ============================================================================
+# This module handles persistence of AI-extracted knowledge to PostgreSQL.
+# It implements idempotent database operations that can be safely re-run
+# without creating duplicates or data corruption.
+#
+# KEY OPERATIONS:
+# 1. Update paper metadata with AI-extracted classifications
+# 2. Insert claims with full context and validation
+# 3. Upsert concepts, methods, variables (create or update existing)
+# 4. Link extracted entities to papers through junction tables
+# 5. Handle all operations within single transaction for consistency
+#
+# UPSERT STRATEGY:
+# - Papers: Update metadata only
+# - Claims: Insert new (conflict = skip)
+# - Concepts/Methods/Variables: Upsert (create or enhance existing)
+# - Links: Upsert with context updates
+# ============================================================================
 
+# Import database connection from zotero sync module
 from zotero_sync.db import get_db_connection
 from .parser import (
     clean_paper_meta,
@@ -15,19 +32,51 @@ from .parser import (
 
 def write_enrichment(paper_id: str, parsed: dict) -> dict:
     """
-    Writes all enrichment data for one paper inside a single transaction.
-    Returns a summary dict with counts of what was written.
+    Write all AI-extracted knowledge for one paper to the database.
+    
+    This function orchestrates the complete database persistence workflow
+    within a single transaction to ensure data consistency. It handles:
+    
+    1. Paper metadata updates (discipline, framework, citation intent)
+    2. Claims insertion with conflict handling
+    3. Concepts/methods/variables upserts with relationship linking
+    4. Status updates to track processing completion
+    
+    The operation is idempotent - safe to re-run without creating duplicates
+    or corrupting existing data. This allows reprocessing papers with
+    updated models or prompts.
+    
+    Args:
+        paper_id (str): Unique identifier for the paper being processed
+        parsed (dict): Cleaned and validated AI response from parser module
+        
+    Returns:
+        dict: Summary counts of inserted/updated records:
+              - claims: Number of new claims inserted
+              - concepts: Number of concepts processed
+              - methods: Number of methods processed  
+              - variables: Number of variables processed
+              
+    Raises:
+        DatabaseError: If transaction fails (automatically rolled back)
     """
+    
+    # ── CLEAN AND VALIDATE INPUT DATA ────────────────────────────────────────
+    # Use parser functions to ensure data quality and type safety
     meta      = clean_paper_meta(parsed.get("paper_meta", {}))
     claims    = [clean_claim(c)    for c in parsed.get("claims",    []) if c.get("claim")]
     concepts  = [clean_concept(c)  for c in parsed.get("concepts",  []) if c.get("name")]
     methods   = [clean_method(m)   for m in parsed.get("methods",   []) if m.get("name")]
     variables = [clean_variable(v) for v in parsed.get("variables", []) if v.get("name")]
 
+    # ── DATABASE TRANSACTION ─────────────────────────────────────────────────
+    # All operations within single transaction ensures consistency
     with get_db_connection() as conn:
         with conn.cursor() as cur:
 
-            # ── 1. Update paper metadata ───────────────────────────────────
+            # ── 1. UPDATE PAPER METADATA ─────────────────────────────────────
+            # Update paper record with AI-extracted high-level classifications
+            # This enriches the paper with disciplinary and theoretical context
             cur.execute(
                 """
                 UPDATE papers SET
@@ -48,7 +97,9 @@ def write_enrichment(paper_id: str, parsed: dict) -> dict:
                 ),
             )
 
-            # ── 2. Insert claims ───────────────────────────────────────────
+            # ── 2. INSERT CLAIMS ─────────────────────────────────────────────
+            # Insert new claims with full context and metadata
+            # ON CONFLICT DO NOTHING prevents duplicates on re-runs
             claim_ids = []
             for c in claims:
                 cur.execute(
@@ -92,8 +143,11 @@ def write_enrichment(paper_id: str, parsed: dict) -> dict:
                 if row:
                     claim_ids.append(row["claim_id"])
 
-            # ── 3. Upsert concepts + link to paper ─────────────────────────
+            # ── 3. UPSERT CONCEPTS + LINK TO PAPER ───────────────────────────
+            # Create new concepts or update existing ones with enhanced metadata
+            # Link concepts to papers with role and context information
             for concept in concepts:
+                # Upsert concept (create new or update existing)
                 cur.execute(
                     """
                     INSERT INTO concepts (name, definition, origin, discipline)
@@ -113,6 +167,7 @@ def write_enrichment(paper_id: str, parsed: dict) -> dict:
                 )
                 concept_id = cur.fetchone()["concept_id"]
 
+                # Link concept to paper with usage context
                 cur.execute(
                     """
                     INSERT INTO paper_concepts (paper_id, concept_id, role, context_note)
@@ -123,8 +178,10 @@ def write_enrichment(paper_id: str, parsed: dict) -> dict:
                     (paper_id, concept_id, concept["role"], concept["context_note"]),
                 )
 
-            # ── 4. Upsert methods + link to paper ──────────────────────────
+            # ── 4. UPSERT METHODS + LINK TO PAPER ────────────────────────────
+            # Handle research methodology entities and their paper associations
             for method in methods:
+                # Upsert method with paradigm and tradition classification
                 cur.execute(
                     """
                     INSERT INTO methods (name, paradigm, tradition, category)
@@ -144,6 +201,7 @@ def write_enrichment(paper_id: str, parsed: dict) -> dict:
                 )
                 method_id = cur.fetchone()["method_id"]
 
+                # Link method to paper with usage context
                 cur.execute(
                     """
                     INSERT INTO paper_methods (paper_id, method_id, context_note)
@@ -154,8 +212,10 @@ def write_enrichment(paper_id: str, parsed: dict) -> dict:
                     (paper_id, method_id, method["context_note"]),
                 )
 
-            # ── 5. Upsert variables + link to paper ────────────────────────
+            # ── 5. UPSERT VARIABLES + LINK TO PAPER ──────────────────────────
+            # Handle quantitative variables and their operationalization context
             for variable in variables:
+                # Upsert variable with definition and measurement unit
                 cur.execute(
                     """
                     INSERT INTO variables (name, category, definition, unit)
@@ -174,6 +234,7 @@ def write_enrichment(paper_id: str, parsed: dict) -> dict:
                 )
                 variable_id = cur.fetchone()["variable_id"]
 
+                # Link variable to paper with analytical role
                 cur.execute(
                     """
                     INSERT INTO paper_variables (paper_id, variable_id, role)
@@ -183,8 +244,11 @@ def write_enrichment(paper_id: str, parsed: dict) -> dict:
                     (paper_id, variable_id, variable["role"]),
                 )
 
+        # Commit all operations as single atomic transaction
         conn.commit()
 
+    # ── RETURN PROCESSING SUMMARY ─────────────────────────────────────────────
+    # Provide counts for monitoring and debugging
     return {
         "claims":    len(claim_ids),
         "concepts":  len(concepts),

@@ -1,8 +1,28 @@
-"""
-All prompt templates live here.
-Keeping prompts separate from logic makes them easy to tune
-without touching any other file.
-"""
+# ============================================================================
+# AI ENRICHMENT PIPELINE - PROMPT TEMPLATES
+# ============================================================================
+# This module contains all prompt templates for the AI enrichment pipeline.
+# Prompts are carefully designed to extract structured knowledge from academic
+# papers across multiple research paradigms (quantitative, qualitative, 
+# theoretical, historical, philosophical).
+#
+# PROMPT ARCHITECTURE:
+# 1. SYSTEM PROMPT: Sets role, output format, and quality standards
+# 2. USER PROMPT: Contains paper content and structured extraction request
+#
+# OUTPUT FORMAT:
+# - Strictly enforced JSON schema with validation
+# - Multi-paradigm support for different types of claims
+# - Comprehensive metadata extraction
+# - Context-aware processing (annotations vs full-text)
+# ============================================================================
+
+# ── SYSTEM PROMPT ──────────────────────────────────────────────────────────
+# This prompt establishes the AI's role and output constraints.
+# Key design decisions:
+# - Emphasizes academic rigor and source fidelity
+# - Enforces JSON-only responses for reliable parsing
+# - Sets conservative approach (null over guessing)
 
 SYSTEM_PROMPT = """\
 You are a rigorous academic research assistant specializing in economics \
@@ -27,11 +47,30 @@ def build_user_prompt(
     max_claims: int,
 ) -> str:
     """
-    Builds the user-facing prompt.
-    pdf_text is None in annotation-driven mode.
+    Construct comprehensive user prompt for structured knowledge extraction.
+    
+    This function builds context-aware prompts that adapt to available content:
+    - Annotation-driven mode: Uses highlights and notes as primary content
+    - Full-text mode: Includes complete PDF content for comprehensive analysis
+    - Hybrid mode: Combines both sources when available
+    
+    The prompt structure ensures consistent extraction across different content
+    sources while respecting the multi-paradigm nature of academic research.
+    
+    Args:
+        title (str): Paper title
+        abstract (str | None): Paper abstract if available
+        authors (list[str]): Ordered list of author names
+        annotations (list[dict]): Zotero highlights and notes
+        pdf_text (str | None): Full PDF content (None for annotation-driven mode)
+        max_claims (int): Maximum number of claims to extract
+        
+    Returns:
+        str: Complete structured prompt for AI processing
     """
 
-    # ── Paper header ──────────────────────────────────────────────────────────
+    # ── PAPER HEADER SECTION ─────────────────────────────────────────────────
+    # Basic bibliographic information provides context for extraction
     lines = [
         "## PAPER TO ANALYZE",
         f"**Title:** {title}",
@@ -40,7 +79,8 @@ def build_user_prompt(
         "",
     ]
 
-    # ── Full text (Mode B) ────────────────────────────────────────────────────
+    # ── FULL TEXT SECTION (Full-Text Mode) ───────────────────────────────────
+    # Include complete PDF content when available for comprehensive analysis
     if pdf_text:
         lines += [
             "## FULL TEXT",
@@ -48,16 +88,20 @@ def build_user_prompt(
             "",
         ]
 
-    # ── Annotations (both modes) ──────────────────────────────────────────────
+    # ── ANNOTATIONS SECTION (Both Modes) ─────────────────────────────────────
+    # Always include annotations when available as they represent focused insights
     if annotations:
         lines.append("## RESEARCHER ANNOTATIONS (highlights and notes)")
+        
         for i, ann in enumerate(annotations, 1):
+            # Extract annotation metadata
             ann_type = ann.get("annotation_type", "highlight")
             page = ann.get("page_number")
             text = ann.get("highlight_text", "")
             note = ann.get("user_note", "")
             color = ann.get("color", "")
 
+            # Build annotation display with all available context
             parts = [f"{i}. [{ann_type.upper()}]"]
             if page:
                 parts.append(f"p.{page}")
@@ -71,7 +115,8 @@ def build_user_prompt(
             lines.append(" ".join(parts))
         lines.append("")
 
-    # ── Output schema ─────────────────────────────────────────────────────────
+    # ── OUTPUT SCHEMA SPECIFICATION ──────────────────────────────────────────
+    # Detailed JSON schema example ensures consistent structured output
     _schema_example = '''```json
 {
   "paper_meta": {
@@ -127,8 +172,10 @@ def build_user_prompt(
     }
   ]
 }
-```'''  # safe: triple-backticks inside triple-single-quoted string
+```'''  # Note: Triple-backticks safely inside triple-single-quoted string
 
+    # ── VALIDATION RULES AND CONSTRAINTS ─────────────────────────────────────
+    # Comprehensive rules ensure data quality and database consistency
     _rules = (
         "Rules:\n"
         "- claim_type must be one of: empirical, theoretical, conceptual, historical, normative, methodological\n"
@@ -143,6 +190,7 @@ def build_user_prompt(
         "- concepts, methods, variables may be empty arrays [] if not applicable.\n"
     )
 
+    # ── FINAL PROMPT ASSEMBLY ────────────────────────────────────────────────
     lines += [
         "## REQUIRED OUTPUT",
         "Return a single JSON object with exactly this structure.",
