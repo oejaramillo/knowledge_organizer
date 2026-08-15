@@ -117,14 +117,14 @@ export default function MainLayout({ projectType, onToggle }) {
           }} onClick={e => e.stopPropagation()}>
 
             <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-main)' }}>
-              ✨ AI Enrichment Options
+              AI Enrichment Options
             </div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Just run for a default enrichment, all items with annotations</div>
 
             {/* Checkboxes */}
             {[
               { field: 'full_text', label: 'Full-text mode', desc: 'Thorough but uses more tokens' },
-              { field: 'force',     label: 'Force reprocess', desc: 'Re-run already processed papers' },
-              { field: 'dry_run',   label: 'Dry run', desc: 'Preview only — writes nothing' },
+              { field: 'force',     label: 'Force reprocess', desc: 'Re-run already processed papers' }
             ].map(({ field, label, desc }) => (
               <label key={field} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer' }}>
                 <input type="checkbox" {...opt(field)} style={{ marginTop: 2, accentColor: 'var(--accent-blue)' }} />
@@ -138,7 +138,7 @@ export default function MainLayout({ projectType, onToggle }) {
             {/* Zotero key */}
             <div>
               <label style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
-                Single paper key (optional)
+                Single paper key (optional) for enriching a specific zotero item
               </label>
               <input
                 className="form-input"

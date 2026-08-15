@@ -10,7 +10,7 @@ class SyncOptions(BaseModel):
     force: bool = False
 
 @router.post("/zotero-sync")
-def run_zotero_sync(opts: SyncOptions):
+def run_zotero_sync(opts: SyncOptions = SyncOptions()):
     args = [sys.executable, "sync.py"]
     if opts.force:
         args.append("--force")

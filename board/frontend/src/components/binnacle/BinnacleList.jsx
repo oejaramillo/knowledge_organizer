@@ -10,6 +10,39 @@ function formatDate(dateStr) {
 
 const EMPTY_FORM = { title: "", content: "", day: "", month: "", year: "", author_id: "", meeting_id: "", task_id: "" };
 
+const FormFields = ({ f, onChange, projectContributors = [], meetings = [], tasks = [] }) => (
+    <>
+      <input className="form-input" name="title" placeholder="Entry title (optional)" value={f.title} onChange={onChange} />
+      <textarea className="form-input" name="content" placeholder="Entry content *" value={f.content} onChange={onChange} rows={4} required />
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <input className="form-input" name="day"   type="number" placeholder="DD"   min="1"    max="31"   value={f.day}   onChange={onChange} style={{ width: 64 }} />
+        <input className="form-input" name="month" type="number" placeholder="MM"   min="1"    max="12"   value={f.month} onChange={onChange} style={{ width: 64 }} />
+        <input className="form-input" name="year"  type="number" placeholder="YYYY" min="2000" max="2100" value={f.year}  onChange={onChange} style={{ width: 88 }} />
+        <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Leave blank for today</span>
+      </div>
+      {projectContributors.length > 0 && (
+        <select className="form-input" name="author_id" value={f.author_id} onChange={onChange}>
+          <option value="">Author (optional)</option>
+          {projectContributors.map(pc => (
+            <option key={pc.contributor.contributor_id} value={pc.contributor.contributor_id}>{pc.contributor.name}</option>
+          ))}
+        </select>
+      )}
+      {meetings.length > 0 && (
+        <select className="form-input" name="meeting_id" value={f.meeting_id} onChange={onChange}>
+          <option value="">Link to meeting (optional)</option>
+          {meetings.map(m => <option key={m.meeting_id} value={m.meeting_id}>{m.title} — {formatDate(m.meeting_date)}</option>)}
+        </select>
+      )}
+      {tasks.length > 0 && (
+        <select className="form-input" name="task_id" value={f.task_id} onChange={onChange}>
+          <option value="">Link to task (optional)</option>
+          {tasks.map(t => <option key={t.task_id} value={t.task_id}>{t.title}</option>)}
+        </select>
+      )}
+    </>
+  );
+
 export default function BinnacleList({ binnacleEntries = [], projectId, fetchProject, projectContributors = [], meetings = [], tasks = [] }) {
   const [showForm, setShowForm]     = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -110,39 +143,6 @@ export default function BinnacleList({ binnacleEntries = [], projectId, fetchPro
     } catch (err) { console.error(err); }
   };
 
-  const FormFields = ({ f, onChange, idPrefix = "" }) => (
-    <>
-      <input className="form-input" name="title" placeholder="Entry title (optional)" value={f.title} onChange={onChange} />
-      <textarea className="form-input" name="content" placeholder="Entry content *" value={f.content} onChange={onChange} rows={4} required />
-      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-        <input className="form-input" name="day"   type="number" placeholder="DD"   min="1"    max="31"   value={f.day}   onChange={onChange} style={{ width: 64 }} />
-        <input className="form-input" name="month" type="number" placeholder="MM"   min="1"    max="12"   value={f.month} onChange={onChange} style={{ width: 64 }} />
-        <input className="form-input" name="year"  type="number" placeholder="YYYY" min="2000" max="2100" value={f.year}  onChange={onChange} style={{ width: 88 }} />
-        <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Leave blank for today</span>
-      </div>
-      {projectContributors.length > 0 && (
-        <select className="form-input" name="author_id" value={f.author_id} onChange={onChange}>
-          <option value="">Author (optional)</option>
-          {projectContributors.map(pc => (
-            <option key={pc.contributor.contributor_id} value={pc.contributor.contributor_id}>{pc.contributor.name}</option>
-          ))}
-        </select>
-      )}
-      {meetings.length > 0 && (
-        <select className="form-input" name="meeting_id" value={f.meeting_id} onChange={onChange}>
-          <option value="">Link to meeting (optional)</option>
-          {meetings.map(m => <option key={m.meeting_id} value={m.meeting_id}>{m.title} — {formatDate(m.meeting_date)}</option>)}
-        </select>
-      )}
-      {tasks.length > 0 && (
-        <select className="form-input" name="task_id" value={f.task_id} onChange={onChange}>
-          <option value="">Link to task (optional)</option>
-          {tasks.map(t => <option key={t.task_id} value={t.task_id}>{t.title}</option>)}
-        </select>
-      )}
-    </>
-  );
-
   return (
     <div className="section-panel">
       <div className="section-panel__header">
@@ -158,7 +158,7 @@ export default function BinnacleList({ binnacleEntries = [], projectId, fetchPro
           onSubmit={handleSubmit}
           style={{ padding: "12px 16px", borderTop: "1px solid var(--border-color)", display: "flex", flexDirection: "column", gap: 8 }}
         >
-          <FormFields f={form} onChange={handleChange} />
+          <FormFields f={form} onChange={handleChange} projectContributors={projectContributors} meetings={meetings} tasks={tasks} />
           <div style={{ display: "flex", gap: 8 }}>
             <button
               type="submit"
@@ -207,7 +207,7 @@ export default function BinnacleList({ binnacleEntries = [], projectId, fetchPro
                 {/* Inline edit form */}
                 {isEditing && (
                   <div style={{ padding: "12px 16px", borderTop: "1px solid var(--border-color)", display: "flex", flexDirection: "column", gap: 8 }}>
-                    <FormFields f={editForm} onChange={handleEditChange} />
+                    <FormFields f={editForm} onChange={handleEditChange} projectContributors={projectContributors} meetings={meetings} tasks={tasks} />
                     <div style={{ display: "flex", gap: 8 }}>
                       <button
                         onClick={() => handleEditSave(entry.binnacle_id)}
