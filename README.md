@@ -1,5 +1,9 @@
 # Research Knowledge Management System
 
+#### Video Demo:  https://www.youtube.com/watch?v=GJJy3LNGHzE
+
+## Description
+
 A comprehensive personal bibliography and research management platform that integrates Zotero synchronization, AI-powered content enrichment, and an interactive web dashboard for managing academic papers, research projects, ideas, tasks, meetings, books and general personal track of literature and insights.
 
 ## Project Overview and history
