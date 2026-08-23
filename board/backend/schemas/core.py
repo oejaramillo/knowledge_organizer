@@ -246,9 +246,10 @@ class PaperResponse(PaperBase):
 
 class PaperUpdate(BaseModel):
     status:               Optional[str] = None
-    date_read:  Optional[datetime] = None
-    rating:     Optional[int] = Field(None, ge=1, le=5)
-    is_digital: Optional[bool] = None
+    date_read:            Optional[datetime] = None
+    rating:               Optional[int] = Field(None, ge=1, le=5)
+    is_digital:           Optional[bool] = None
+    is_print:             Optional[bool] = None
     notes:                Optional[str] = None
     is_read:              Optional[bool] = None
     theoretical_framework: Optional[str] = None

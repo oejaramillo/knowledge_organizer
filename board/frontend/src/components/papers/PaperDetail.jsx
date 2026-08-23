@@ -29,7 +29,7 @@ export default function PaperDetail({ paper, onUpdate, hideAuthors = false }) {
       is_digital:            paper.is_digital ?? false,
       is_print:              paper.is_print ?? false,
     });
-  }, [paper.paper_id, paper.rating, paper.is_digital, paper.is_print, paper.theoretical_framework, paper.discipline]);
+  }, [paper.paper_id]);
 
   const setField = (field, value) => setForm(f => ({ ...f, [field]: value }));
 

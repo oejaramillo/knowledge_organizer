@@ -85,7 +85,7 @@ def sync_papers(client, since=None, since_date=None):
                         data.get("pages"),
                         data.get("abstractNote"),
                         data.get("url"),
-                        "journal_article" if item_type == "journalArticle" else "other",
+                        data.get("itemType") 
                     ),
                 )
 

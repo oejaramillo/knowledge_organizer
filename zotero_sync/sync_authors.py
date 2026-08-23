@@ -1,6 +1,5 @@
 from db import get_db_connection
 
-
 def sync_authors(client, since=None, since_date=None):
     label = (
         f"(incremental since v{since})" if since is not None
@@ -56,9 +55,13 @@ def sync_authors(client, since=None, since_date=None):
 
                 creators = data.get("creators", [])
 
+                AUTHOR_TYPES = {
+                    "author", "presenter"
+                }
+                
                 position = 1
                 for creator in creators:
-                    if creator.get("creatorType") != "author":
+                    if creator.get("creatorType") not in AUTHOR_TYPES:
                         continue
 
                     if creator.get("name"):
