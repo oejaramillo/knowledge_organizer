@@ -241,6 +241,7 @@ class PaperResponse(PaperBase):
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     authors: List[AuthorResponse] = []
+    parts:      List['PaperPartResponse'] = []
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -264,6 +265,32 @@ class PaperProjectResponse(BaseModel):
     citation_intent: Optional[str] = None
     added_at:       Optional[datetime] = None
     paper:          PaperResponse
+
+    model_config = ConfigDict(from_attributes=True)
+
+# ==========================================
+# PAPER PARTS (Chapters)
+# ==========================================
+class PaperPartCreate(BaseModel):
+    title:     str
+    is_read:   bool = False
+    date_read: Optional[datetime] = None
+    position:  Optional[int] = None
+
+class PaperPartUpdate(BaseModel):
+    title:     Optional[str] = None
+    is_read:   Optional[bool] = None
+    date_read: Optional[datetime] = None
+    position:  Optional[int] = None
+
+class PaperPartResponse(BaseModel):
+    part_id:   UUID
+    paper_id:  UUID
+    title:     str
+    is_read:   bool
+    date_read: Optional[datetime] = None
+    position:  Optional[int] = None
+    created_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
 

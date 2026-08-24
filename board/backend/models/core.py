@@ -263,6 +263,29 @@ class Paper(Base):
         back_populates="papers",
     )
 
+    parts = relationship(
+        "PaperPart", 
+        backref="paper", 
+        cascade="all, delete-orphan", 
+        order_by="PaperPart.position"
+    )
+
+# ==========================================
+# PAPERS PARTS
+# ==========================================
+class PaperPart(Base):
+    __tablename__ = "paper_parts"
+
+    part_id    = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    paper_id   = Column(UUID(as_uuid=True), ForeignKey("papers.paper_id", ondelete="CASCADE"), nullable=False)
+    title      = Column(Text, nullable=False)
+    is_read    = Column(Boolean, default=False, nullable=False)
+    date_read  = Column(DateTime(timezone=True))
+    position   = Column(Integer)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
 
 # ==========================================
 # IDEAS MODEL

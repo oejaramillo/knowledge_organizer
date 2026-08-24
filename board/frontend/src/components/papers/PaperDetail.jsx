@@ -2,10 +2,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import PaperClaimsTab from './PaperClaimsTab';
 import PaperAnnotationsTab from './PaperAnnotationTab';
+import PaperPartsTab from './PaperPartsTab';
 import AuthorPopover from './AuthorPopover';
 import apiClient from '../../api/client'
 
-const TABS = ['Overview', 'Claims', 'Annotations'];
+const TABS = ['Overview', 'Parts', 'Claims', 'Annotations'];
 
 export default function PaperDetail({ paper, onUpdate, hideAuthors = false }) {
   const [activeTab, setActiveTab] = useState('Overview');
@@ -276,6 +277,11 @@ export default function PaperDetail({ paper, onUpdate, hideAuthors = false }) {
       {/* ── ANNOTATIONS TAB ── */}
       {activeTab === 'Annotations' && (
         <PaperAnnotationsTab paperId={paper.paper_id} />
+      )}
+
+      {/* ── PARTS TAB ── */}
+      {activeTab === 'Parts' && (
+        <PaperPartsTab paperId={paper.paper_id} />
       )}
     </div>
   );

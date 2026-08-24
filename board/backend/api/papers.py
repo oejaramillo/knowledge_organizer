@@ -4,14 +4,17 @@ from typing import List
 from uuid import UUID
 
 from core.database import get_db
-from models.core import Paper, Claim, Annotation
+from models.core import Paper, Claim, Annotation, PaperPart
 from schemas.core import (
     PaperCreate, 
     PaperResponse,
     PaperUpdate,
     ClaimCreate, 
     ClaimResponse,
-    AnnotationResponse
+    AnnotationResponse,
+    PaperPartCreate, 
+    PaperPartUpdate, 
+    PaperPartResponse
 )
 
 router = APIRouter(
@@ -100,3 +103,35 @@ def delete_claim(claim_id: UUID, db: Session = Depends(get_db)):
 def get_annotations(paper_id: UUID, db: Session = Depends(get_db)):
     return db.query(Annotation).filter(Annotation.paper_id == paper_id)\
              .order_by(Annotation.page_number).all()
+
+@router.get("/{paper_id}/parts", response_model=List[PaperPartResponse])
+def get_parts(paper_id: UUID, db: Session = Depends(get_db)):
+    return db.query(PaperPart).filter(PaperPart.paper_id == paper_id)\
+             .order_by(PaperPart.position, PaperPart.created_at).all()
+
+@router.post("/{paper_id}/parts", response_model=PaperPartResponse, status_code=201)
+def create_part(paper_id: UUID, part_in: PaperPartCreate, db: Session = Depends(get_db)):
+    part = PaperPart(paper_id=paper_id, **part_in.model_dump())
+    db.add(part)
+    db.commit()
+    db.refresh(part)
+    return part
+
+@router.patch("/parts/{part_id}", response_model=PaperPartResponse)
+def update_part(part_id: UUID, patch: PaperPartUpdate, db: Session = Depends(get_db)):
+    part = db.query(PaperPart).filter(PaperPart.part_id == part_id).first()
+    if not part:
+        raise HTTPException(status_code=404, detail="Part not found")
+    for k, v in patch.model_dump(exclude_unset=True).items():
+        setattr(part, k, v)
+    db.commit()
+    db.refresh(part)
+    return part
+
+@router.delete("/parts/{part_id}", status_code=204)
+def delete_part(part_id: UUID, db: Session = Depends(get_db)):
+    part = db.query(PaperPart).filter(PaperPart.part_id == part_id).first()
+    if not part:
+        raise HTTPException(status_code=404, detail="Part not found")
+    db.delete(part)
+    db.commit()
