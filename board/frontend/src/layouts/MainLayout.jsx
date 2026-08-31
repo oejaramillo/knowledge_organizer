@@ -25,7 +25,7 @@
  * - AI enrichment options and parameters
  * ============================================================================ */}
 
-import { Outlet } from 'react-router-dom'
+import { Outlet, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import ProjectTreeNav from '../components/projects/ProjectTreeNav';
 import apiClient from '../api/client';
@@ -42,6 +42,8 @@ export default function MainLayout({ projectType, onToggle }) {
   // Tool execution states - prevent concurrent operations
   const [runningZotero, setRunningZotero] = useState(false);
   const [runningAI, setRunningAI] = useState(false);
+
+  const navigate = useNavigate();
 
   // Modal and notification states
   const [showAIModal, setShowAIModal] = useState(false);
@@ -215,6 +217,20 @@ export default function MainLayout({ projectType, onToggle }) {
             }}
           >
             {runningAI ? '⏳ Enriching…' : '✨ AI Enrichment'}
+          </button>
+
+          {/* ── SUMMARY BUTTON ─────────────────────────────────────────────── */}
+          <button
+            onClick={() => navigate('/summary')}
+            style={{
+              padding: '7px 10px', fontSize: 12, fontWeight: 600,
+              borderRadius: 8, cursor: 'pointer',
+              border: '1px solid var(--border-color)',
+              background: 'var(--bg-white)', color: 'var(--text-main)',
+              textAlign: 'left',
+            }}
+          >
+            📊 Reading Summary
           </button>
         </div>
       </aside>
