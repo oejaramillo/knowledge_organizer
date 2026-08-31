@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom'
 import MainLayout from './layouts/MainLayout'
 import ProjectDetail from './components/projects/ProjectDetail'
 import SummaryPage from './pages/SummaryPage'
+import TrackerPage from './pages/TrackerPage';
 import './index.css'
 
 function App() {
@@ -22,6 +23,7 @@ function App() {
         <Route index element={<EmptyState />} />
         <Route path="projects/:project_id" element={<ProjectDetail />} />
         <Route path="summary" element={<SummaryPage />} />
+        <Route path="tracker" element={<TrackerPage />} />
       </Route>
     </Routes>
   )

@@ -232,6 +232,20 @@ export default function MainLayout({ projectType, onToggle }) {
           >
             📊 Reading Summary
           </button>
+
+          {/* ── TO DO RESEARCH BUTTON ─────────────────────────────────────────────── */}
+          <button
+            onClick={() => navigate('/tracker')}
+            style={{
+              padding: '7px 10px', fontSize: 12, fontWeight: 600,
+              borderRadius: 8, cursor: 'pointer',
+              border: '1px solid var(--border-color)',
+              background: 'var(--bg-white)', color: 'var(--text-main)',
+              textAlign: 'left',
+            }}
+          >
+            🗂 Project Tracker
+          </button>
         </div>
       </aside>
 
