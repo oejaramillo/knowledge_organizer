@@ -71,3 +71,30 @@ export function fieldsToTimestamp(fields) {
   const date = fieldsToDateString(fields);
   return date ? `${date}T00:00:00Z` : null;
 }
+
+/** Whole days between an API date and today (negative = in the future). */
+export function daysAgo(value) {
+  const parts = parseDateParts(value);
+  if (!parts) return null;
+
+  const then = Date.UTC(parts.year, parts.month - 1, parts.day);
+  const now = new Date();
+  const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  return Math.round((today - then) / 86400000);
+}
+
+/** "today" / "yesterday" / "12d ago" / "in 3d". */
+export function formatRelativeDays(value) {
+  const diff = daysAgo(value);
+  if (diff === null) return '';
+  if (diff === 0) return 'today';
+  if (diff === 1) return 'yesterday';
+  if (diff < 0) return `in ${-diff}d`;
+  return `${diff}d ago`;
+}
+
+/** Percentage change between two periods; null when there is no baseline. */
+export function percentChange(current, previous) {
+  if (!previous) return null;
+  return Math.round(((current - previous) / previous) * 100);
+}

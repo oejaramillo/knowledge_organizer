@@ -183,7 +183,11 @@ export default function PaperList({ paperAssociations = [] }) {
 
       {/* List */}
       {filtered.length === 0 ? (
-        <p className="empty-state">No papers match your filters.</p>
+        <p className="empty-state">
+          {localPapers.length === 0
+            ? 'No papers in this project yet — sync Zotero to pull them in.'
+            : 'No papers match your filters.'}
+        </p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {filtered.map(paper => (

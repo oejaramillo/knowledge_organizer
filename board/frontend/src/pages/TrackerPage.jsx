@@ -1,251 +1,367 @@
-import React, { useEffect, useState } from 'react';
+// pages/TrackerPage.jsx
+//
+// Project tracker: what am I working on, and what am I leaving behind?
+//
+// "Work" is any binnacle entry, meeting or reading. Nothing is stored manually:
+// the project you are working on is simply the one with the most recent work,
+// while the deliberate decision to set something aside lives in the project's
+// own status ("paused"), so an intentional pause never looks like neglect.
+
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import apiClient from '../api/client';
+import Sparkline from '../components/tracker/Sparkline';
+import { formatDate, formatRelativeDays } from '../utils/date';
 
-function daysSince(dateStr) {
-  if (!dateStr) return null;
-  const diff = Math.floor((Date.now() - new Date(dateStr)) / 86400000);
-  if (diff === 0) return 'Today';
-  if (diff === 1) return 'Yesterday';
-  return `${diff}d ago`;
-}
+// Recency bands
+const ACTIVE_DAYS = 14;
+const COOLING_DAYS = 45;
 
-function staleness(dateStr) {
-  if (!dateStr) return 'none';
-  const diff = Math.floor((Date.now() - new Date(dateStr)) / 86400000);
-  if (diff <= 7)  return 'fresh';
-  if (diff <= 30) return 'warm';
-  return 'stale';
-}
-
-const STALE_COLORS = {
-  fresh: '#10b981',
-  warm:  '#f59e0b',
-  stale: '#ef4444',
-  none:  '#94a3b8',
+const KIND_LABEL = {
+  binnacle: 'binnacle entry',
+  meeting: 'meeting',
+  reading: 'reading',
 };
 
-// States: 'backlog' → 'upnext' → 'working' → 'backlog'
-const NEXT_STATE = { backlog: 'upnext', upnext: 'working', working: 'backlog' };
-
-const STATE_BUTTON = {
-  backlog:  { label: 'Backlog',  bg: 'var(--bg-white)',   color: 'var(--text-muted)', border: '1px solid var(--border-color)' },
-  upnext:   { label: 'Up Next',  bg: '#f1f5f9',           color: '#475569',           border: '1px solid #cbd5e1' },
-  working:  { label: 'Working',  bg: 'var(--accent-blue)', color: '#fff',             border: '1px solid var(--accent-blue)' },
+const KIND_ICON = {
+  binnacle: '📓',
+  meeting: '👥',
+  reading: '📖',
 };
 
-function loadState(key) {
-  try { return new Map(JSON.parse(localStorage.getItem(key) || '[]')); }
-  catch { return new Map(); }
+function heatColor(days) {
+  if (days === null || days === undefined) return '#94a3b8';
+  if (days <= 7) return '#10b981';
+  if (days <= 30) return '#f59e0b';
+  return '#ef4444';
+}
+
+function StatusBadge({ status }) {
+  const map = {
+    active:    { background: '#dcfce7', color: '#16a34a', label: 'active' },
+    paused:    { background: '#fef9c3', color: '#ca8a04', label: 'on hold' },
+    completed: { background: '#dbeafe', color: '#2563eb', label: 'completed' },
+  };
+  const style = map[status] || { background: '#f1f5f9', color: '#64748b', label: status };
+  return (
+    <span style={{
+      fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em',
+      padding: '1px 7px', borderRadius: 999, background: style.background, color: style.color,
+      whiteSpace: 'nowrap',
+    }}>
+      {style.label}
+    </span>
+  );
+}
+
+function WorkCounts({ counts, papersRead, papersTotal }) {
+  return (
+    <div style={{ display: 'flex', gap: 12, fontSize: 11, color: 'var(--text-muted)', flexWrap: 'wrap' }}>
+      <span title="binnacle entries">📓 {counts.binnacle}</span>
+      <span title="meetings">👥 {counts.meetings}</span>
+      <span title="reading events">📖 {counts.readings}</span>
+      <span title="papers read in this project">📄 {papersRead}/{papersTotal}</span>
+    </div>
+  );
 }
 
 export default function TrackerPage() {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState(null);
+  const [busyId, setBusyId]     = useState(null);
+  const [openGroups, setOpenGroups] = useState({ active: true, cooling: true, left: true, hold: true });
 
-  // Map of project_id → 'backlog' | 'upnext' | 'working'
-  const [states, setStates] = useState(() => loadState('tracker_states'));
-
-  useEffect(() => {
-    apiClient.get('/tracker/projects')
-      .then(r => setProjects(r.data))
-      .catch(() => setError('Failed to load projects'))
-      .finally(() => setLoading(false));
+  const load = useCallback(async () => {
+    try {
+      const { data } = await apiClient.get('/tracker/projects');
+      setProjects(data);
+      setError(null);
+    } catch (err) {
+      setError(err.response?.data?.detail || err.message || 'Failed to load projects');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const cycle = (id) => {
-    setStates(prev => {
-      const current = prev.get(id) || 'backlog';
-      const next = new Map(prev);
-      next.set(id, NEXT_STATE[current]);
-      localStorage.setItem('tracker_states', JSON.stringify([...next]));
-      return next;
-    });
+  useEffect(() => {
+    load();
+    const onFocus = () => load();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [load]);
+
+  const setStatus = async (projectId, status) => {
+    setBusyId(projectId);
+    try {
+      await apiClient.patch(`/projects/${projectId}`, { status });
+      await load();
+    } catch (err) {
+      setError(err.response?.data?.detail || err.message || 'Could not update the project');
+    } finally {
+      setBusyId(null);
+    }
   };
 
-  const getState = (id) => states.get(id) || 'backlog';
+  // ── grouping ──────────────────────────────────────────────────────────────
+  const groups = useMemo(() => {
+    const byRecency = (a, b) => (a.days_since ?? 1e6) - (b.days_since ?? 1e6);
 
-  if (loading) return <div style={{ padding: 40, color: 'var(--text-muted)', fontSize: 14 }}>Loading tracker…</div>;
-  if (error)   return <div style={{ padding: 40, color: '#ef4444', fontSize: 14 }}>{error}</div>;
+    const onHold = projects.filter(p => p.status === 'paused').sort(byRecency);
+    const working = projects
+      .filter(p => p.status !== 'paused')
+      .sort(byRecency);
+    const workingNow = working.find(p => p.last_activity) || null;
+    const rest = working.filter(p => p !== workingNow);
 
-  const working  = projects.filter(p => getState(p.project_id) === 'working');
-  const upnext   = projects.filter(p => getState(p.project_id) === 'upnext');
-  const backlog  = projects.filter(p => getState(p.project_id) === 'backlog');
+    return {
+      workingNow,
+      active:  rest.filter(p => p.days_since != null && p.days_since <= ACTIVE_DAYS),
+      cooling: rest.filter(p => p.days_since != null && p.days_since > ACTIVE_DAYS && p.days_since <= COOLING_DAYS),
+      left:    rest.filter(p => p.days_since == null || p.days_since > COOLING_DAYS),
+      onHold,
+    };
+  }, [projects]);
 
-  const ProjectRow = ({ p }) => {
-    const state     = getState(p.project_id);
-    const stale     = staleness(p.last_entry_date);
-    const dotColor  = STALE_COLORS[stale];
-    const btn       = STATE_BUTTON[state];
+  if (loading) {
+    return <div style={{ padding: '28px 32px', color: 'var(--text-muted)', fontSize: 14 }}>Loading tracker…</div>;
+  }
 
+  if (error && projects.length === 0) {
     return (
-      <div style={{
-        display: 'flex', alignItems: 'flex-start', gap: 14,
-        padding: '14px 0',
-        borderBottom: '1px solid var(--border-color)',
-        opacity: state === 'backlog' ? 0.65 : 1,
-      }}>
-        {/* staleness dot — only meaningful for prioritized */}
+      <div style={{ padding: '28px 32px' }}>
         <div style={{
-          width: 8, height: 8, borderRadius: '50%',
-          background: state === 'backlog' ? '#e2e8f0' : dotColor,
-          flexShrink: 0, marginTop: 5,
-        }} />
-
-        {/* content */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-main)' }}>
-              {p.name}
-            </span>
-            {p.status && p.status !== 'active' && (
-              <span style={{
-                fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
-                letterSpacing: '0.05em', color: 'var(--text-muted)',
-                border: '1px solid var(--border-color)',
-                padding: '1px 6px', borderRadius: 4,
-              }}>
-                {p.status}
-              </span>
-            )}
-          </div>
-
-          {p.last_entry_date ? (
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: p.last_entry_snippet ? 4 : 0 }}>
-              Last entry:{' '}
-              <span style={{ color: state === 'backlog' ? 'var(--text-muted)' : dotColor, fontWeight: 600 }}>
-                {daysSince(p.last_entry_date)}
-              </span>
-              {p.last_entry_title && (
-                <span style={{ marginLeft: 6 }}>— {p.last_entry_title}</span>
-              )}
-            </div>
-          ) : (
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>
-              No binnacle entries yet
-            </div>
-          )}
-
-          {p.last_entry_snippet && state !== 'backlog' && (
-            <div style={{
-              fontSize: 11, color: 'var(--text-muted)',
-              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-              maxWidth: 580,
-            }}>
-              {p.last_entry_snippet}{p.last_entry_snippet.length >= 160 ? '…' : ''}
-            </div>
-          )}
+          background: '#fee2e2', border: '1px solid #fca5a5', color: '#991b1b',
+          borderRadius: 10, padding: '14px 18px', fontSize: 13,
+          display: 'flex', alignItems: 'center', gap: 12,
+        }}>
+          <span style={{ flex: 1 }}>⚠ {error}</span>
+          <button className="action-btn" onClick={load} style={{ borderColor: '#fca5a5', color: '#991b1b' }}>Retry</button>
         </div>
+      </div>
+    );
+  }
 
-        {/* cycle button */}
+  const now = groups.workingNow;
+
+  const ProjectRow = ({ p }) => (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 12,
+      padding: '10px 0', borderBottom: '1px solid var(--border-color)',
+    }}>
+      <span style={{ width: 8, height: 8, borderRadius: '50%', background: heatColor(p.days_since), flexShrink: 0 }} />
+
+      <div style={{ flex: '1 1 220px', minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Link to={`/projects/${p.project_id}`} style={{
+            fontSize: 13, fontWeight: 600, color: 'var(--text-main)', textDecoration: 'none',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
+            {p.name}
+          </Link>
+          {p.status !== 'active' && <StatusBadge status={p.status} />}
+        </div>
+        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+          {p.last_activity
+            ? <>last worked {formatRelativeDays(p.last_activity)} · {KIND_ICON[p.last_activity_kind]} {KIND_LABEL[p.last_activity_kind]}</>
+            : 'no work recorded yet'}
+        </div>
+      </div>
+
+      <Sparkline weeks={p.weekly} />
+
+      <div style={{ flex: '0 0 190px', textAlign: 'right' }}>
+        <WorkCounts counts={p.counts} papersRead={p.papers_read} papersTotal={p.papers_total} />
+      </div>
+
+      <button
+        className="action-btn"
+        disabled={busyId === p.project_id}
+        onClick={() => setStatus(p.project_id, p.status === 'paused' ? 'active' : 'paused')}
+        title={p.status === 'paused' ? 'Resume working on this project' : 'Set aside on purpose'}
+        style={{ flexShrink: 0, minHeight: 28, padding: '3px 10px', fontSize: 11 }}
+      >
+        {p.status === 'paused' ? '▶ Resume' : '⏸ Hold'}
+      </button>
+    </div>
+  );
+
+  const Group = ({ title, hint, items, groupKey, accent }) => {
+    if (items.length === 0) return null;
+    const open = openGroups[groupKey];
+    return (
+      <div style={{ background: 'var(--bg-white)', border: '1px solid var(--border-color)', borderRadius: 10, marginBottom: 14 }}>
         <button
-          onClick={() => cycle(p.project_id)}
-          title="Click to cycle: Backlog → Up Next → Working"
+          onClick={() => setOpenGroups(g => ({ ...g, [groupKey]: !g[groupKey] }))}
           style={{
-            flexShrink: 0,
-            padding: '5px 12px', fontSize: 11, fontWeight: 600,
-            borderRadius: 6, cursor: 'pointer',
-            border: btn.border,
-            background: btn.bg,
-            color: btn.color,
-            transition: 'all 0.15s',
-            minWidth: 76, textAlign: 'center',
+            width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+            padding: '12px 18px', background: 'none', border: 'none',
+            cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
           }}
         >
-          {btn.label}
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: accent, flexShrink: 0 }} />
+          <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>
+            {title}
+          </span>
+          <span style={{ fontSize: 11, fontWeight: 600, background: 'var(--border-color)', color: 'var(--text-muted)', borderRadius: 999, padding: '0 7px' }}>
+            {items.length}
+          </span>
+          {hint && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{hint}</span>}
+          <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-muted)' }}>
+            {open ? '▲' : '▼'}
+          </span>
         </button>
+        {open && (
+          <div style={{ padding: '0 18px 6px' }}>
+            {items.map(p => <ProjectRow key={p.project_id} p={p} />)}
+          </div>
+        )}
       </div>
     );
   };
 
-  const Section = ({ title, items, accent }) => (
-    items.length === 0 ? null : (
-      <div style={{
-        background: 'var(--bg-white)',
-        border: '1px solid var(--border-color)',
-        borderRadius: 10, padding: '14px 20px', marginBottom: 16,
-      }}>
+  return (
+    <div style={{ padding: '28px 32px', maxWidth: 1000 }}>
+
+      {/* ── HEADER ─────────────────────────────────────────────────────────── */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, marginBottom: 22, flexWrap: 'wrap' }}>
+        <div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-main)' }}>Project Tracker</div>
+          <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 3 }}>
+            Binnacle entries, meetings and readings count as work — the project you touched last is what you are working on.
+          </div>
+        </div>
+        <button className="action-btn" onClick={load}>⟳ Refresh</button>
+      </div>
+
+      {error && (
         <div style={{
-          fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
-          letterSpacing: '0.08em', color: accent, marginBottom: 4,
+          background: '#fef3c7', border: '1px solid #fcd34d', color: '#92400e',
+          borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: 12,
         }}>
-          {title} — {items.length}
+          ⚠ {error}
         </div>
-        {items.map(p => <ProjectRow key={p.project_id} p={p} />)}
-      </div>
-    )
-  );
-
-  return (
-    <div style={{ padding: '28px 32px', maxWidth: 860 }}>
-
-      {/* header */}
-      <div style={{ marginBottom: 28 }}>
-        <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-main)' }}>
-          Project Tracker
-        </div>
-        <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 3 }}>
-          Click the button on any project to cycle it: Backlog → Up Next → Working.
-        </div>
-        <div style={{ display: 'flex', gap: 16, marginTop: 10 }}>
-          {[
-            { color: '#10b981', label: 'Active ≤ 7d' },
-            { color: '#f59e0b', label: 'Warm ≤ 30d'  },
-            { color: '#ef4444', label: 'Stale > 30d'  },
-            { color: '#94a3b8', label: 'No entries'   },
-          ].map(({ color, label }) => (
-            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--text-muted)' }}>
-              <div style={{ width: 7, height: 7, borderRadius: '50%', background: color }} />
-              {label}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <Section title="Working Now"  items={working} accent="var(--accent-blue)" />
-      <Section title="Up Next"      items={upnext}  accent="#475569" />
-
-      {/* Backlog — collapsed by default if there are prioritized items */}
-      {backlog.length > 0 && (
-        <BacklogSection items={backlog} ProjectRow={ProjectRow} hasPrioritized={working.length + upnext.length > 0} />
       )}
-    </div>
-  );
-}
 
-function BacklogSection({ items, ProjectRow, hasPrioritized }) {
-  const [open, setOpen] = useState(!hasPrioritized);
+      {projects.length === 0 ? (
+        <p className="empty-state">
+          No research projects yet. Projects appear here once they are marked as “research”.
+        </p>
+      ) : (
+        <>
+          {/* ── WORKING NOW ────────────────────────────────────────────────── */}
+          {now ? (
+            <div style={{
+              background: 'var(--bg-white)',
+              border: '1px solid var(--accent-blue)',
+              borderRadius: 12,
+              padding: '20px 24px',
+              marginBottom: 22,
+              boxShadow: '0 4px 16px rgba(59,130,246,0.08)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: heatColor(now.days_since) }} />
+                <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--accent-blue)' }}>
+                  Working now
+                </span>
+              </div>
 
-  return (
-    <div style={{
-      background: 'var(--bg-white)',
-      border: '1px solid var(--border-color)',
-      borderRadius: 10, overflow: 'hidden',
-    }}>
-      <button
-        onClick={() => setOpen(o => !o)}
-        style={{
-          width: '100%', display: 'flex', alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '14px 20px', background: 'none', border: 'none',
-          cursor: 'pointer',
-        }}
-      >
-        <span style={{
-          fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
-          letterSpacing: '0.08em', color: 'var(--text-muted)',
-        }}>
-          Backlog — {items.length}
-        </span>
-        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-          {open ? '▲ hide' : '▼ show'}
-        </span>
-      </button>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+                <div style={{ flex: '1 1 320px', minWidth: 0 }}>
+                  <Link to={`/projects/${now.project_id}`} style={{
+                    fontSize: 20, fontWeight: 700, color: 'var(--text-main)', textDecoration: 'none',
+                  }}>
+                    {now.name}
+                  </Link>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+                    Last worked {formatRelativeDays(now.last_activity)} ({formatDate(now.last_activity)}) ·{' '}
+                    {KIND_ICON[now.last_activity_kind]} {KIND_LABEL[now.last_activity_kind]}
+                  </div>
 
-      {open && (
-        <div style={{ padding: '0 20px 4px' }}>
-          {items.map(p => <ProjectRow key={p.project_id} p={p} />)}
-        </div>
+                  {now.last_note_snippet && (
+                    <div style={{
+                      marginTop: 12, padding: '10px 12px',
+                      background: 'var(--bg-main)', borderRadius: 8,
+                      borderLeft: '3px solid var(--accent-blue)',
+                    }}>
+                      {now.last_note_title && (
+                        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-main)' }}>
+                          {now.last_note_title}
+                        </div>
+                      )}
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.55, marginTop: 2 }}>
+                        {now.last_note_snippet}
+                        {(now.last_note_snippet?.length ?? 0) >= 200 ? '…' : ''}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-end' }}>
+                  <Sparkline weeks={now.weekly} width={12} height={34} />
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                    {now.work_7d} in the last 7 days · {now.work_30d} in 30
+                  </div>
+                  <WorkCounts counts={now.counts} papersRead={now.papers_read} papersTotal={now.papers_total} />
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <Link to={`/projects/${now.project_id}`} className="action-btn" style={{ textDecoration: 'none' }}>
+                      Open project →
+                    </Link>
+                    <button
+                      className="action-btn"
+                      disabled={busyId === now.project_id}
+                      onClick={() => setStatus(now.project_id, 'paused')}
+                      title="Set aside on purpose"
+                    >
+                      ⏸ Hold
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="empty-state" style={{ marginBottom: 22 }}>
+              No work recorded on any research project yet — add a binnacle entry, a meeting or a reading.
+            </p>
+          )}
+
+          {/* ── EVERYTHING ELSE ────────────────────────────────────────────── */}
+          <Group
+            title="Also active" groupKey="active" accent="#10b981"
+            hint={`worked in the last ${ACTIVE_DAYS} days`}
+            items={groups.active}
+          />
+          <Group
+            title="Cooling off" groupKey="cooling" accent="#f59e0b"
+            hint={`${ACTIVE_DAYS}–${COOLING_DAYS} days since the last work`}
+            items={groups.cooling}
+          />
+          <Group
+            title="On hold" groupKey="hold" accent="#ca8a04"
+            hint="set aside on purpose"
+            items={groups.onHold}
+          />
+          <Group
+            title="Left behind" groupKey="left" accent="#ef4444"
+            hint={`no work for ${COOLING_DAYS}+ days`}
+            items={groups.left}
+          />
+
+          {/* ── LEGEND ─────────────────────────────────────────────────────── */}
+          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 6, fontSize: 11, color: 'var(--text-muted)' }}>
+            {[
+              { color: '#10b981', label: 'touched ≤ 7d' },
+              { color: '#f59e0b', label: '≤ 30d' },
+              { color: '#ef4444', label: '> 30d' },
+              { color: '#94a3b8', label: 'never worked' },
+            ].map(({ color, label }) => (
+              <span key={label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: color }} />
+                {label}
+              </span>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

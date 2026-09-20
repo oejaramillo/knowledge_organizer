@@ -200,15 +200,29 @@ export default function ProjectDetail() {
 
   const contributors = project.project_contributors ?? [];
 
+  // A `collection` is a Zotero folder used as a reading list, so it only shows
+  // literature: papers with their authors, parts, claims and annotations.
+  // Tasks, meetings, binnacle, ideas and contributors belong to research projects.
+  const isCollection = project.project_type === 'collection';
+
+  const papersPanel = (
+    <PaperList
+      key={project_id}
+      paperAssociations={project.paper_associations ?? []}
+      projectId={project.project_id}
+      onUpdate={fetchProject}
+    />
+  );
+
   return (
   <div className="project-detail">
     <div className="project-detail__header">
       <div className="detail-header">
         <div>
-          <h2>{project.name}</h2>   {/* ← keep only this one */}
+          <h2>{project.name}</h2>
           {project.zotero_collection_key && (
             <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>
-              Synced from Zotero: {project.name}
+              Synced from Zotero collection
             </p>
           )}
         </div>
@@ -251,7 +265,27 @@ export default function ProjectDetail() {
         </div>
       )}
 
-      {/* Contributors section */}
+      {isCollection ? (
+        /* ── READING COLLECTION ────────────────────────────────────────────
+         * A Zotero folder used as a literature list: papers only, each one
+         * expandable into its overview, parts, claims and annotations. */
+        <div style={{ marginTop: 24 }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            flexWrap: 'wrap', marginBottom: 12,
+          }}>
+            <span className="keyword-tag">Reading collection</span>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+              Literature only — switch to “research” above for tasks, meetings,
+              binnacle, ideas and contributors.
+            </span>
+          </div>
+          {papersPanel}
+        </div>
+      ) : (
+      /* ── RESEARCH PROJECT ──────────────────────────────────────────────
+       * Full workspace: contributors plus the task / meeting / binnacle /
+       * idea / paper panels. */
       <div className="detail-section detail-section--full" style={{ marginTop: "24px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border-color)", paddingBottom: "10px", marginBottom: "14px" }}>
           <h3 style={{ margin: 0, fontSize: "15px", color: "var(--text-muted)" }}>Contributors</h3>
@@ -515,14 +549,7 @@ export default function ProjectDetail() {
         )}
 
         {/* Papers */}
-        {activeSection === 'papers' && (
-          <PaperList
-            key={project_id}
-            paperAssociations={project.paper_associations ?? []}
-            projectId={project.project_id}
-            onUpdate={fetchProject}
-          />
-        )}
+        {activeSection === 'papers' && papersPanel}
 
         {/* Tasks */}
         {activeSection === 'tasks' && (
@@ -536,6 +563,7 @@ export default function ProjectDetail() {
         )}
 
       </div>
+      )}
     </div>
   );
 }

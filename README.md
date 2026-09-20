@@ -47,6 +47,17 @@ ai_enrichments/                                  board/backend/  (FastAPI)
 
 **Data model highlights**
 
+* `projects.type` splits every Zotero folder into one of two kinds, and the
+  dashboard renders them differently:
+
+  | | `research` | `collection` |
+  |---|---|---|
+  | Meaning | a project you work on | a reading list of literature |
+  | Dashboard shows | contributors + tasks, meetings, binnacle, ideas, papers | the paper list only |
+  | Project tracker | included (the tracker queries `type = 'research'`) | not included |
+
+  The type is toggled from the project header and stored in Postgres, so a
+  collection can be promoted to a research project (and back) at any time.
 * `papers` ↔ `projects` is many-to-many through `paper_projects`, so one item can
   belong to several Zotero collections. `sync_papers` rebuilds those links for
   every item it touches, so moving an item between collections is reflected.
@@ -179,6 +190,62 @@ The sidebar's **Sync Zotero** and **AI Enrichment** buttons call
 `POST /api/tools/zotero-sync` and `POST /api/tools/ai-enrichment`, which shell out
 to the two CLIs above. The AI button opens a small options modal (full-text,
 force, single zotero key, provider).
+
+### Project tracker
+
+`/tracker` answers one question: *what am I working on, and what am I leaving
+behind?* Only `research` projects appear (collections are reading lists).
+
+Three things count as **work**, and all three weigh the same:
+
+* a **binnacle** entry,
+* a **meeting**,
+* a **reading** — a paper marked read, or a chapter of a paper in progress
+  (the same definition the reading summary uses).
+
+**"Working now" is derived, never stored**: it is the research project with the
+most recent work event, so there is always exactly one and it always matches what
+you actually touched last. Every project row shows a colour-coded recency dot and
+an 8-week sparkline, which makes the "worked on it one week, not the next" rhythm
+visible.
+
+The deliberate decision is kept separate from the accidental one:
+
+| Group | Meaning |
+|---|---|
+| Working now | the project with the most recent work |
+| Also active | worked within the last 14 days |
+| Cooling off | 15–45 days since the last work |
+| On hold | `status = 'paused'` — set aside **on purpose** |
+| Left behind | no work for 45+ days, or never worked |
+
+**⏸ Hold** / **▶ Resume** write `projects.status`, so an intentional pause
+survives restarts and never looks like neglect. Archived projects are hidden
+entirely.
+
+### Reading summary
+
+`/summary` is a live view of reading activity. `GET /api/stats/` computes it in a
+handful of aggregate queries and the page refreshes itself every 30 seconds while
+the tab is visible, plus immediately whenever the tab becomes visible or the
+window regains focus (a hidden tab polls nothing, which keeps the Neon compute
+bill down). The header shows the last update time and a manual **⟳ Refresh**.
+
+It answers four questions:
+
+| Panel | Question it answers |
+|---|---|
+| Pulse | current / longest reading streak, last finished paper, unread backlog, pages per paper |
+| In progress now | papers with chapters marked read but not finished, with a progress bar |
+| KPI cards | this month vs last month (with % delta), this year, library progress, backlog |
+| Reading activity | 26-week heatmap (pages per day) to spot trends at a glance |
+| Monthly trend | 12-month bars, toggle between papers and pages; empty months are kept as zero so gaps are visible |
+| By document type / Most read authors | what kind of material, and who you keep returning to |
+| Where the reading happens | the 8 projects with the most papers read |
+| Recently read | the last 10 finished papers, with project and relative date |
+
+All reading metrics share one definition of an "event" (a finished paper, or a
+chapter of a paper still in progress — never both), so the panels can't disagree.
 
 ### Security model
 
