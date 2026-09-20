@@ -17,6 +17,7 @@ export default function PaperDetail({ paper, onUpdate, hideAuthors = false }) {
     rating:                paper.rating ?? null,
     is_digital:            paper.is_digital ?? false,
     is_print:              paper.is_print ?? false,
+    pages_read: paper.pages_read ?? 0,
   });
 
   const [activeAuthor, setActiveAuthor] = useState(null); // { id, ref }
@@ -29,6 +30,7 @@ export default function PaperDetail({ paper, onUpdate, hideAuthors = false }) {
       rating:                paper.rating ?? null,
       is_digital:            paper.is_digital ?? false,
       is_print:              paper.is_print ?? false,
+      pages_read: paper.pages_read ?? 0,
     });
   }, [paper.paper_id]);
 
@@ -207,6 +209,20 @@ export default function PaperDetail({ paper, onUpdate, hideAuthors = false }) {
                   </span>
                 )}
               </div>
+            </div>
+
+            {/* Pages read */}
+            <div>
+              <label style={labelStyle}>Pages Read</label>
+              <input
+                type="number"
+                min="0"
+                className="form-input"
+                value={form.pages_read ?? ''}
+                onChange={e => setField('pages_read', e.target.value === '' ? null : parseInt(e.target.value))}
+                placeholder="0"
+                style={{ width: 100 }}
+              />
             </div>
 
             {/* Format */}

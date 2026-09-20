@@ -8,6 +8,16 @@ export default function PaperPartsTab({ paperId }) {
   const [adding, setAdding]     = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [editTitle, setEditTitle] = useState('');
+  const [editPages, setEditPages] = useState({});
+
+  const savePages = async (partId, value) => {
+    const parsed = parseInt(value);
+    if (isNaN(parsed) || parsed < 0) return;
+      try {
+        await apiClient.patch(`/papers/parts/${partId}`, { pages_read: parsed });
+        fetchParts();
+      } catch (err) { console.error(err); }
+    };
 
   // Date picker state: partId waiting for a date before saving
   const [datePicking, setDatePicking] = useState(null); // part_id
@@ -26,6 +36,7 @@ export default function PaperPartsTab({ paperId }) {
   const readCount = parts.filter(p => p.is_read).length;
   const total     = parts.length;
   const progress  = total > 0 ? Math.round((readCount / total) * 100) : 0;
+  const totalPages = parts.reduce((sum, p) => sum + (p.pages_read || 0), 0);
 
   const addPart = async () => {
     if (!newTitle.trim()) return;
@@ -94,24 +105,27 @@ export default function PaperPartsTab({ paperId }) {
 
       {/* Progress bar */}
       {total > 0 && (
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Progress
-            </span>
-            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-              {readCount}/{total} parts read ({progress}%)
-            </span>
+        <>
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Progress
+              </span>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                {readCount}/{total} parts read ({progress}%)
+                {totalPages > 0 && <span style={{ marginLeft: 8 }}>· {totalPages} pp</span>}
+              </span>
+            </div>
+            <div style={{ height: 6, borderRadius: 999, background: 'var(--border-color)', overflow: 'hidden' }}>
+              <div style={{
+                height: '100%', borderRadius: 999,
+                width: `${progress}%`,
+                background: progress === 100 ? '#22c55e' : 'var(--accent-blue)',
+                transition: 'width 0.3s ease',
+              }} />
+            </div>
           </div>
-          <div style={{ height: 6, borderRadius: 999, background: 'var(--border-color)', overflow: 'hidden' }}>
-            <div style={{
-              height: '100%', borderRadius: 999,
-              width: `${progress}%`,
-              background: progress === 100 ? '#22c55e' : 'var(--accent-blue)',
-              transition: 'width 0.3s ease',
-            }} />
-          </div>
-        </div>
+        </>
       )}
 
       {/* Parts list */}
@@ -164,6 +178,23 @@ export default function PaperPartsTab({ paperId }) {
                     {new Date(part.date_read).toLocaleDateString('en-GB')}
                   </span>
                 )}
+
+                {/* Pages read input */}
+                <input
+                  type="number"
+                  min="0"
+                  value={editPages[part.part_id] ?? (part.pages_read || '')}
+                  onChange={e => setEditPages(p => ({ ...p, [part.part_id]: e.target.value }))}
+                  onBlur={e => savePages(part.part_id, e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') savePages(part.part_id, editPages[part.part_id] ?? part.pages_read); }}
+                  placeholder="pp"
+                  style={{
+                    width: 46, fontSize: 11, padding: '2px 5px',
+                    borderRadius: 5, border: '1px solid var(--border-color)',
+                    textAlign: 'center', color: 'var(--text-muted)',
+                    flexShrink: 0,
+                  }}
+                />
 
                 {/* Actions */}
                 {editingId === part.part_id ? (

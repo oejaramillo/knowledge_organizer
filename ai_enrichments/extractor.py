@@ -10,26 +10,24 @@ from .config import MAX_PDF_CHARS
 
 
 def get_papers_to_enrich(force: bool = False) -> list[dict]:
-    """
-    Returns papers that have not been processed yet.
-    If force=True, returns ALL papers regardless of status.
-    """
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             if force:
                 cur.execute(
                     """
-                    SELECT paper_id, title, abstract, pdf_path, zotero_key, status
+                    SELECT paper_id, title, abstract, pdf_path, zotero_key, status, document_type
                     FROM papers
+                    WHERE is_read = true
                     ORDER BY year DESC NULLS LAST
                     """
                 )
             else:
                 cur.execute(
                     """
-                    SELECT paper_id, title, abstract, pdf_path, zotero_key, status
+                    SELECT paper_id, title, abstract, pdf_path, zotero_key, status, document_type
                     FROM papers
-                    WHERE status != 'processed'
+                    WHERE is_read = true
+                      AND (status IS NULL OR status != 'processed')
                     ORDER BY year DESC NULLS LAST
                     """
                 )

@@ -14,6 +14,62 @@ def get_reading_stats(db: Session = Depends(get_db)):
         FROM papers
     """)).fetchone()
 
+    pages_totals = db.execute(text("""
+        SELECT
+            COALESCE(SUM(pages), 0)                                        AS total_pages,
+            COALESCE(SUM(pages) FILTER (
+                WHERE date_ref >= date_trunc('month', CURRENT_DATE)
+            ), 0)                                                           AS pages_this_month,
+            COALESCE(SUM(pages) FILTER (
+                WHERE date_ref >= date_trunc('month', CURRENT_DATE) - INTERVAL '1 month'
+                  AND date_ref <  date_trunc('month', CURRENT_DATE)
+            ), 0)                                                           AS pages_last_month,
+            COALESCE(SUM(pages) FILTER (
+                WHERE date_ref >= date_trunc('year', CURRENT_DATE)
+            ), 0)                                                           AS pages_this_year
+        FROM (
+            -- Paper is fully read: count paper-level pages only
+            SELECT pages_read AS pages, date_read AS date_ref
+            FROM papers
+            WHERE is_read = true AND pages_read > 0
+
+            UNION ALL
+
+            -- Paper not fully read: count part-level pages only
+            SELECT pp.pages_read AS pages, pp.date_read AS date_ref
+            FROM paper_parts pp
+            JOIN papers p ON pp.paper_id = p.paper_id
+            WHERE p.is_read = false
+              AND pp.is_read = true
+              AND pp.pages_read > 0
+        ) combined
+    """)).fetchone()
+
+    monthly_pages = db.execute(text("""
+        SELECT
+            TO_CHAR(date_trunc('month', date_ref), 'Mon YY') AS month,
+            date_trunc('month', date_ref)                    AS month_ts,
+            COALESCE(SUM(pages), 0)                          AS pages
+        FROM (
+            SELECT pages_read AS pages, date_read AS date_ref
+            FROM papers
+            WHERE is_read = true AND pages_read > 0
+              AND date_read >= CURRENT_DATE - INTERVAL '12 months'
+
+            UNION ALL
+
+            SELECT pp.pages_read AS pages, pp.date_read AS date_ref
+            FROM paper_parts pp
+            JOIN papers p ON pp.paper_id = p.paper_id
+            WHERE p.is_read = false
+              AND pp.is_read = true
+              AND pp.pages_read > 0
+              AND pp.date_read >= CURRENT_DATE - INTERVAL '12 months'
+        ) combined
+        GROUP BY date_trunc('month', date_ref)
+        ORDER BY month_ts
+    """)).fetchall()
+
     time_stats = db.execute(text("""
         SELECT
             COUNT(*) FILTER (
@@ -141,5 +197,13 @@ def get_reading_stats(db: Session = Depends(get_db)):
         "by_type_year": [
             {"document_type": r.document_type or "unknown", "read_count": r.read_count}
             for r in by_type_year
+        ],
+        "pages_total":      int(pages_totals.total_pages),
+        "pages_this_month": int(pages_totals.pages_this_month),
+        "pages_last_month": int(pages_totals.pages_last_month),
+        "pages_this_year":  int(pages_totals.pages_this_year),
+        "monthly_pages": [
+            {"month": r.month, "pages": int(r.pages)}
+            for r in monthly_pages
         ],
     }

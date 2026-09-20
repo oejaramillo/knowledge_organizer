@@ -2,8 +2,6 @@
 import React, { useEffect, useState } from 'react';
 import apiClient from '../api/client';
 
-
-
 const TYPE_LABELS = {
   journalArticle:   'Journal Article',
   book:             'Book',
@@ -35,6 +33,7 @@ const TYPE_COLORS = {
 };
 
 function StatCard({ label, value, sub }) {
+
   return (
     <div style={{
       background: 'var(--bg-white)',
@@ -91,7 +90,9 @@ export default function SummaryPage() {
   );
 
   const { total_papers, total_read, month_read, year_read,
-          last_read, by_type, top_authors, monthly_trend } = stats;
+        last_read, by_type, top_authors, monthly_trend,
+        pages_total, pages_this_month, pages_last_month, pages_this_year,
+        monthly_pages } = stats;
 
   const readPct = total_papers > 0
     ? Math.round((total_read / total_papers) * 100)
@@ -127,6 +128,14 @@ export default function SummaryPage() {
         <StatCard label="Read This Year"  value={year_read} />
       </div>
 
+      {/* ── PAGES STAT CARDS ── */}
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 32 }}>
+        <StatCard label="Total Pages Read"    value={pages_total?.toLocaleString()} />
+        <StatCard label="Pages This Month"    value={pages_this_month?.toLocaleString()} />
+        <StatCard label="Pages Last Month"    value={pages_last_month?.toLocaleString()} />
+        <StatCard label="Pages This Year"     value={pages_this_year?.toLocaleString()} />
+      </div>
+
       {/* ── MONTHLY TREND ── */}
       {monthly_trend.length > 0 && (
         <div style={{
@@ -156,6 +165,39 @@ export default function SummaryPage() {
           </div>
         </div>
       )}
+
+      {/* ── MONTHLY PAGES TREND ── */}
+      {monthly_pages?.length > 0 && (() => {
+        const maxPages = Math.max(...monthly_pages.map(m => m.pages), 1);
+        return (
+          <div style={{
+            background: 'var(--bg-white)',
+            border: '1px solid var(--border-color)',
+            borderRadius: 10, padding: '18px 22px', marginBottom: 24,
+          }}>
+            <SectionTitle>Pages Read per Month (Last 12 Months)</SectionTitle>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 80 }}>
+              {monthly_pages.map((m, i) => (
+                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>
+                    {m.pages > 0 ? m.pages.toLocaleString() : ''}
+                  </div>
+                  <div style={{
+                    width: '100%',
+                    height: Math.max(4, (m.pages / maxPages) * 56),
+                    background: '#8b5cf6',
+                    borderRadius: '3px 3px 0 0',
+                    transition: 'height 0.3s',
+                  }} />
+                  <div style={{ fontSize: 9, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                    {m.month}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── BY TYPE + TOP AUTHORS ── */}
       <div style={{ display: 'flex', gap: 20, marginBottom: 24, flexWrap: 'wrap' }}>

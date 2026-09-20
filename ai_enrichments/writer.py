@@ -13,40 +13,61 @@ from .parser import (
 )
 
 
-def write_enrichment(paper_id: str, parsed: dict) -> dict:
-    """
-    Writes all enrichment data for one paper inside a single transaction.
-    Returns a summary dict with counts of what was written.
-    """
+def write_enrichment(paper_id: str, parsed: dict, has_abstract: bool = True) -> dict:
     meta      = clean_paper_meta(parsed.get("paper_meta", {}))
     claims    = [clean_claim(c)    for c in parsed.get("claims",    []) if c.get("claim")]
     concepts  = [clean_concept(c)  for c in parsed.get("concepts",  []) if c.get("name")]
     methods   = [clean_method(m)   for m in parsed.get("methods",   []) if m.get("name")]
     variables = [clean_variable(v) for v in parsed.get("variables", []) if v.get("name")]
 
+    generated_abstract = meta.get("generated_abstract") if not has_abstract else None
+
     with get_db_connection() as conn:
         with conn.cursor() as cur:
 
             # ── 1. Update paper metadata ───────────────────────────────────
-            cur.execute(
-                """
-                UPDATE papers SET
-                    discipline            = %s,
-                    theoretical_framework = %s,
-                    citation_intent       = %s,
-                    language              = %s,
-                    status                = 'processed',
-                    updated_at            = NOW()
-                WHERE paper_id = %s
-                """,
-                (
-                    meta["discipline"] or None,
-                    meta["theoretical_framework"],
-                    meta["citation_intent"] or None,
-                    meta["language"],
-                    paper_id,
-                ),
-            )
+            if generated_abstract:
+                cur.execute(
+                    """
+                    UPDATE papers SET
+                        abstract              = %s,
+                        discipline            = %s,
+                        theoretical_framework = %s,
+                        citation_intent       = %s,
+                        language              = %s,
+                        status                = 'processed',
+                        updated_at            = NOW()
+                    WHERE paper_id = %s
+                    """,
+                    (
+                        generated_abstract,
+                        meta["discipline"] or None,
+                        meta["theoretical_framework"],
+                        meta["citation_intent"] or None,
+                        meta["language"],
+                        paper_id,
+                    ),
+                )
+            else:
+                cur.execute(
+                    """
+                    UPDATE papers SET
+                        discipline            = %s,
+                        theoretical_framework = %s,
+                        citation_intent       = %s,
+                        language              = %s,
+                        status                = 'processed',
+                        updated_at            = NOW()
+                    WHERE paper_id = %s
+                    """,
+                    (
+                        meta["discipline"] or None,
+                        meta["theoretical_framework"],
+                        meta["citation_intent"] or None,
+                        meta["language"],
+                        paper_id,
+                    ),
+                )
 
             # ── 2. Insert claims ───────────────────────────────────────────
             claim_ids = []

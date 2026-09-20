@@ -209,6 +209,7 @@ class Paper(Base):
     volume = Column(Text, nullable=True)
     issue = Column(Text, nullable=True)
     pages = Column(Text, nullable=True)
+    pages_read = Column(Integer, default=0)
     abstract = Column(Text, nullable=True)
     language = Column(Text, default="en")
     pdf_path = Column(Text, nullable=True)
@@ -282,6 +283,7 @@ class PaperPart(Base):
     is_read    = Column(Boolean, default=False, nullable=False)
     date_read  = Column(DateTime(timezone=True))
     position   = Column(Integer)
+    pages_read = Column(Integer, default=0)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 

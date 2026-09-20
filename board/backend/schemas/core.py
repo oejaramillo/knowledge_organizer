@@ -213,6 +213,7 @@ class PaperBase(BaseModel):
     volume: Optional[str] = None
     issue: Optional[str] = None
     pages: Optional[str] = None
+    pages_read: Optional[int] = 0
     abstract: Optional[str] = None
     language: Optional[str] = "en"
     pdf_path: Optional[str] = None
@@ -252,6 +253,7 @@ class PaperUpdate(BaseModel):
     is_digital:           Optional[bool] = None
     is_print:             Optional[bool] = None
     notes:                Optional[str] = None
+    pages_read:           Optional[int] = None
     is_read:              Optional[bool] = None
     theoretical_framework: Optional[str] = None
     discipline:           Optional[List[str]] = None
@@ -275,12 +277,14 @@ class PaperPartCreate(BaseModel):
     title:     str
     is_read:   bool = False
     date_read: Optional[datetime] = None
+    pages_read: Optional[int] = None
     position:  Optional[int] = None
 
 class PaperPartUpdate(BaseModel):
     title:     Optional[str] = None
     is_read:   Optional[bool] = None
     date_read: Optional[datetime] = None
+    pages_read: Optional[int] = None
     position:  Optional[int] = None
 
 class PaperPartResponse(BaseModel):
@@ -291,7 +295,7 @@ class PaperPartResponse(BaseModel):
     date_read: Optional[datetime] = None
     position:  Optional[int] = None
     created_at: Optional[datetime] = None
-
+    pages_read: Optional[int] = 0
     model_config = ConfigDict(from_attributes=True)
 
 

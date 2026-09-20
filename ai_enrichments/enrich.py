@@ -50,12 +50,14 @@ def get_provider(name: str):
 
 
 def enrich_paper(paper: dict, provider, full_text: bool, dry_run: bool) -> bool:
-    paper_id  = str(paper["paper_id"])
-    title     = paper["title"]
-    abstract  = paper.get("abstract")
-    pdf_path  = paper.get("pdf_path")
+    paper_id      = str(paper["paper_id"])
+    title         = paper["title"]
+    abstract      = paper.get("abstract")
+    pdf_path      = paper.get("pdf_path")
+    document_type = paper.get("document_type", "journalArticle")   # ← add this
 
     print(f"\n  Title    : {title[:80]}")
+    print(f"  Type     : {document_type}")                          # ← add this
     print(f"  Paper ID : {paper_id}")
 
     authors     = get_paper_authors(paper_id)
@@ -85,6 +87,7 @@ def enrich_paper(paper: dict, provider, full_text: bool, dry_run: bool) -> bool:
         annotations=annotations,
         pdf_text=pdf_text,
         max_claims=MAX_CLAIMS,
+        document_type=document_type,     # ← add this
     )
 
     if dry_run:
@@ -106,9 +109,13 @@ def enrich_paper(paper: dict, provider, full_text: bool, dry_run: bool) -> bool:
         print(f"  [error] Parse failed: {exc}")
         return False
 
-    # ── Write ─────────────────────────────────────────────────────────────────
+    # Surface generated abstract in logs
+    gen_abstract = parsed.get("paper_meta", {}).get("generated_abstract")
+    if gen_abstract:
+        print(f"  Abstract : generated from annotations ({len(gen_abstract)} chars)")
+
     try:
-        counts = write_enrichment(paper_id, parsed)
+        counts = write_enrichment(paper_id, parsed, has_abstract=bool(abstract))
     except Exception as exc:
         print(f"  [error] DB write failed: {exc}")
         return False
