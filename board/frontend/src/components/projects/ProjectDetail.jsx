@@ -139,14 +139,24 @@ export default function ProjectDetail() {
 
   const handleEditSave = async (contributorId) => {
     setEditSaving(true);
-    await apiClient.patch(`/contributors/${contributorId}`, {
-      name: editForm.name,
-      email: editForm.email || null,
-      site: editForm.site || null,
-    });
-    setEditingContributor(null);
-    setEditSaving(false);
-    fetchProject();
+    try {
+      // The contributor record and the project link are two different rows:
+      // the role lives on `project_contributors`.
+      await apiClient.patch(`/contributors/${contributorId}`, {
+        name: editForm.name,
+        email: editForm.email || null,
+        site: editForm.site || null,
+      });
+      await apiClient.patch(`/projects/${project_id}/contributors/${contributorId}`, {
+        project_role: editForm.project_role || null,
+      });
+      setEditingContributor(null);
+      fetchProject();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setEditSaving(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -161,8 +171,8 @@ export default function ProjectDetail() {
         // Already exists — just use their ID
         contributorId = selectedContributor.contributor_id;
       } else {
-        // Create new contributor
-        const created = await apiClient.post('/contributors/', {
+        // Create new contributor (axios resolves to the response, not the body)
+        const { data: created } = await apiClient.post('/contributors/', {
           name: form.name,
           email: form.email || null,
           site: form.site || null,
@@ -246,7 +256,7 @@ export default function ProjectDetail() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--border-color)", paddingBottom: "10px", marginBottom: "14px" }}>
           <h3 style={{ margin: 0, fontSize: "15px", color: "var(--text-muted)" }}>Contributors</h3>
           <button
-            onClick={() => { showForm ? resetForm() : setShowForm(true); }}
+            onClick={() => { if (showForm) resetForm(); else setShowForm(true); }}
             style={{
               fontSize: "12px", padding: "4px 12px", borderRadius: "999px",
               border: "1px solid var(--accent-blue)",

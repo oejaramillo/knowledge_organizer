@@ -172,4 +172,7 @@ def clean_paper_meta(raw: dict) -> dict:
         "theoretical_framework":safe_str(raw.get("theoretical_framework")),
         "citation_intent":      safe_list(raw.get("citation_intent")),
         "language":             safe_str(raw.get("language")) or "en",
+        # Kept here (not just in the raw response) so the writer can persist it
+        # when the paper had no abstract of its own.
+        "generated_abstract":   safe_str(raw.get("generated_abstract")),
     }

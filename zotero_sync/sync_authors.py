@@ -1,12 +1,12 @@
 from db import get_db_connection
+from utils import announce
+
+# Zotero creator types that should be recorded as paper authors.
+AUTHOR_TYPES = {"author", "presenter"}
+
 
 def sync_authors(client, since=None, since_date=None):
-    label = (
-        f"(incremental since v{since})" if since is not None
-        else f"(incremental since {since_date})" if since_date is not None
-        else "(full sync)"
-    )
-    print(f"Syncing authors and links... {label}")
+    announce("authors and links", since=since, since_date=since_date)
 
     items = client.get_top_level_items(since=since, since_date=since_date)
 
@@ -55,10 +55,6 @@ def sync_authors(client, since=None, since_date=None):
 
                 creators = data.get("creators", [])
 
-                AUTHOR_TYPES = {
-                    "author", "presenter"
-                }
-                
                 position = 1
                 for creator in creators:
                     if creator.get("creatorType") not in AUTHOR_TYPES:

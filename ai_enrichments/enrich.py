@@ -49,7 +49,12 @@ def get_provider(name: str):
         sys.exit(1)
 
 
-def enrich_paper(paper: dict, provider, full_text: bool, dry_run: bool) -> bool:
+def enrich_paper(paper: dict, provider, full_text: bool, dry_run: bool) -> bool | None:
+    """Enrich a single paper.
+
+    Returns ``True`` on success, ``False`` on failure and ``None`` when the
+    paper was skipped because there is nothing to send to the model.
+    """
     paper_id      = str(paper["paper_id"])
     title         = paper["title"]
     abstract      = paper.get("abstract")
@@ -77,7 +82,7 @@ def enrich_paper(paper: dict, provider, full_text: bool, dry_run: bool) -> bool:
 
     if not annotations and not pdf_text and not abstract:
         print("  [skip] No annotations, no PDF text, no abstract — nothing to enrich.")
-        return False
+        return None
 
     # ── Build prompt ──────────────────────────────────────────────────────────
     user_prompt = build_user_prompt(

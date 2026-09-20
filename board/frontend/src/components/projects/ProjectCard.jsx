@@ -1,6 +1,7 @@
 // frontend/src/components/projects/ProjectCard.jsx
 
 import { Link } from 'react-router-dom';
+import { formatDate } from '../../utils/date';
 
 export default function ProjectCard({ project }) {
     return (
@@ -13,7 +14,7 @@ export default function ProjectCard({ project }) {
                     </p>
                 </div> 
                 <p className="project-card__date">
-                    Created: {new Date(project.created_at).toLocaleDateString()}
+                    Created: {formatDate(project.created_at)}
                 </p>
             </div>
         </Link>

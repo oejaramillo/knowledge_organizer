@@ -4,9 +4,31 @@ Loads paper data from the database and optionally extracts PDF text.
 
 import sys
 from pathlib import Path
+from urllib.parse import unquote, urlparse
 
 from zotero_sync.db import get_db_connection
 from .config import MAX_PDF_CHARS
+
+
+def normalize_pdf_path(pdf_path: str | None) -> Path | None:
+    """Turn a Zotero ``pdf_path`` value into a filesystem path.
+
+    Zotero stores attachments as ``file://`` URIs with percent-encoded
+    characters (spaces, accents, ...), so the value coming from the database has
+    to be both scheme-stripped *and* URL-decoded before it can be opened.
+    Plain filesystem paths are returned unchanged.
+    """
+    if not pdf_path:
+        return None
+
+    value = str(pdf_path).strip()
+    if value.startswith("file://"):
+        parsed = urlparse(value)
+        value = unquote(parsed.path or "")
+    else:
+        value = unquote(value)
+
+    return Path(value) if value else None
 
 
 def get_papers_to_enrich(force: bool = False) -> list[dict]:
@@ -82,13 +104,12 @@ def extract_pdf_text(pdf_path: str | None) -> str | None:
     if not pdf_path:
         return None
 
-    # The Local API returns a file:// URI — strip it
-    if pdf_path.startswith("file://"):
-        pdf_path = pdf_path[7:]
+    path = normalize_pdf_path(pdf_path)
+    if path is None:
+        return None
 
-    path = Path(pdf_path)
     if not path.exists():
-        print(f"  [warn] PDF not found: {pdf_path}", file=sys.stderr)
+        print(f"  [warn] PDF not found: {path}", file=sys.stderr)
         return None
 
     try:

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import apiClient from '../../api/client';
 import TaskForm from './TaskForm';
-import { COLUMNS, EMPTY_FORM, PRIORITY_STYLES } from './taskUtils';
+import { EMPTY_FORM, PRIORITY_STYLES } from './taskUtils';
+import { formatDate, dateToFields, fieldsToDateString } from '../../utils/date';
 
 const STATUS_ORDER = ['todo', 'in_progress', 'blocked', 'completed'];
 
@@ -11,12 +12,6 @@ const STATUS_META = {
   blocked:     { label: 'Blocked',     color: '#ef4444' },
   completed:   { label: 'Completed',   color: '#22c55e' },
 };
-
-function formatDate(dateStr) {
-  if (!dateStr) return null;
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
 
 export default function TaskList({ tasks: initialTasks = [], projectId, projectContributors = [], fetchProject }) {
   const [showForm, setShowForm]       = useState(false);
@@ -35,7 +30,7 @@ export default function TaskList({ tasks: initialTasks = [], projectId, projectC
       title:       task.title,
       description: task.description || '',
       priority:    task.priority,
-      due_date:    task.due_date ? task.due_date.split('T')[0] : '',
+      due:         dateToFields(task.due_date),
       assigned_to: task.assignee?.contributor_id || '',
     });
     setShowForm(true);
@@ -50,7 +45,7 @@ export default function TaskList({ tasks: initialTasks = [], projectId, projectC
         title:       form.title,
         description: form.description || null,
         priority:    form.priority,
-        due_date:    form.due_date || null,
+        due_date:    fieldsToDateString(form.due),
         assigned_to: form.assigned_to || null,
         ...(editingTask ? {} : { project_id: projectId, status: 'todo' }),
       };

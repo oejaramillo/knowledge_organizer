@@ -1,25 +1,20 @@
 // components/binnacle/BinnacleList.jsx
 import { useState } from "react";
 import apiClient from '../../api/client';
-
-function formatDate(dateStr) {
-  if (!dateStr) return "";
-  const d = new Date(dateStr);
-  return `${String(d.getUTCDate()).padStart(2,"0")}/${String(d.getUTCMonth()+1).padStart(2,"0")}/${d.getUTCFullYear()}`;
-}
+import DateField from '../common/DateField';
+import { formatDate, dateToFields, fieldsToTimestamp } from '../../utils/date';
 
 const EMPTY_FORM = { title: "", content: "", day: "", month: "", year: "", author_id: "", meeting_id: "", task_id: "" };
 
-const FormFields = ({ f, onChange, projectContributors = [], meetings = [], tasks = [] }) => (
+const FormFields = ({ f, onChange, onDateChange, projectContributors = [], meetings = [], tasks = [] }) => (
     <>
       <input className="form-input" name="title" placeholder="Entry title (optional)" value={f.title} onChange={onChange} />
       <textarea className="form-input" name="content" placeholder="Entry content *" value={f.content} onChange={onChange} rows={4} required />
-      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-        <input className="form-input" name="day"   type="number" placeholder="DD"   min="1"    max="31"   value={f.day}   onChange={onChange} style={{ width: 64 }} />
-        <input className="form-input" name="month" type="number" placeholder="MM"   min="1"    max="12"   value={f.month} onChange={onChange} style={{ width: 64 }} />
-        <input className="form-input" name="year"  type="number" placeholder="YYYY" min="2000" max="2100" value={f.year}  onChange={onChange} style={{ width: 88 }} />
-        <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Leave blank for today</span>
-      </div>
+      <DateField
+        value={{ day: f.day, month: f.month, year: f.year }}
+        onChange={onDateChange}
+        hint="Required — DD/MM/YYYY"
+      />
       {projectContributors.length > 0 && (
         <select className="form-input" name="author_id" value={f.author_id} onChange={onChange}>
           <option value="">Author (optional)</option>
@@ -59,7 +54,8 @@ export default function BinnacleList({ binnacleEntries = [], projectId, fetchPro
   const toggleExpanded = (id) => {
     setExpandedIds(prev => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
@@ -67,17 +63,12 @@ export default function BinnacleList({ binnacleEntries = [], projectId, fetchPro
   const handleChange = (e) => setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
   const handleEditChange = (e) => setEditForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
 
-  const buildIsoDate = (f) =>
-    f.day && f.month && f.year
-      ? `${f.year}-${String(f.month).padStart(2,"0")}-${String(f.day).padStart(2,"0")}T00:00:00Z`
-      : undefined;
-
   // ── Add new entry ──
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.content) return;
     setSubmitting(true);
-    const entryDate = buildIsoDate(form);
+    const entryDate = fieldsToTimestamp(form);
     try {
       await apiClient.post("/binnacle/", {
         title: form.title || null,
@@ -98,14 +89,11 @@ export default function BinnacleList({ binnacleEntries = [], projectId, fetchPro
   // ── Start inline edit ──
   const startEdit = (e, entry) => {
     e.stopPropagation();
-    const d = new Date(entry.entry_date);
     setEditingId(entry.binnacle_id);
     setEditForm({
       title: entry.title || "",
       content: entry.content || "",
-      day: String(d.getUTCDate()).padStart(2,"0"),
-      month: String(d.getUTCMonth()+1).padStart(2,"0"),
-      year: String(d.getUTCFullYear()),
+      ...dateToFields(entry.entry_date),
       author_id: entry.author?.contributor_id || "",
       meeting_id: entry.meeting?.meeting_id || "",
       task_id: entry.task?.task_id || "",
@@ -118,7 +106,7 @@ export default function BinnacleList({ binnacleEntries = [], projectId, fetchPro
   const handleEditSave = async (binnacleId) => {
     if (!editForm.content) return;
     setEditSaving(true);
-    const entryDate = buildIsoDate(editForm);
+    const entryDate = fieldsToTimestamp(editForm);
     try {
       await apiClient.patch(`/binnacle/${binnacleId}`, {
         title: editForm.title || null,
@@ -158,7 +146,14 @@ export default function BinnacleList({ binnacleEntries = [], projectId, fetchPro
           onSubmit={handleSubmit}
           style={{ padding: "12px 16px", borderTop: "1px solid var(--border-color)", display: "flex", flexDirection: "column", gap: 8 }}
         >
-          <FormFields f={form} onChange={handleChange} projectContributors={projectContributors} meetings={meetings} tasks={tasks} />
+          <FormFields
+            f={form}
+            onChange={handleChange}
+            onDateChange={(next) => setForm(prev => ({ ...prev, ...next }))}
+            projectContributors={projectContributors}
+            meetings={meetings}
+            tasks={tasks}
+          />
           <div style={{ display: "flex", gap: 8 }}>
             <button
               type="submit"
@@ -207,7 +202,14 @@ export default function BinnacleList({ binnacleEntries = [], projectId, fetchPro
                 {/* Inline edit form */}
                 {isEditing && (
                   <div style={{ padding: "12px 16px", borderTop: "1px solid var(--border-color)", display: "flex", flexDirection: "column", gap: 8 }}>
-                    <FormFields f={editForm} onChange={handleEditChange} projectContributors={projectContributors} meetings={meetings} tasks={tasks} />
+                    <FormFields
+                      f={editForm}
+                      onChange={handleEditChange}
+                      onDateChange={(next) => setEditForm(prev => ({ ...prev, ...next }))}
+                      projectContributors={projectContributors}
+                      meetings={meetings}
+                      tasks={tasks}
+                    />
                     <div style={{ display: "flex", gap: 8 }}>
                       <button
                         onClick={() => handleEditSave(entry.binnacle_id)}

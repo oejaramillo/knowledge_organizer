@@ -21,6 +21,7 @@ from schemas.core import (
     ProjectDetailedResponse, 
     ProjectContributorCreate, 
     ProjectContributorResponse,
+    ProjectContributorUpdate,
     ProjectUpdate
 )
 
@@ -135,6 +136,29 @@ def add_contributor_to_project(
     db.commit()
     db.refresh(link)
     return link
+
+@router.patch("/{project_id}/contributors/{contributor_id}", response_model=ProjectContributorResponse)
+def update_project_contributor(
+    project_id: UUID,
+    contributor_id: UUID,
+    payload: ProjectContributorUpdate,
+    db: Session = Depends(get_db),
+):
+    """Update the project-specific data of a contributor link (currently the role)."""
+    link = db.query(ProjectContributor).filter_by(
+        project_id=project_id,
+        contributor_id=contributor_id,
+    ).first()
+    if not link:
+        raise HTTPException(status_code=404, detail="Contributor not in project")
+
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(link, field, value)
+
+    db.commit()
+    db.refresh(link)
+    return link
+
 
 @router.delete("/{project_id}/contributors/{contributor_id}", status_code=204)
 def remove_contributor_from_project(

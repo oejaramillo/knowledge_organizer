@@ -1,8 +1,7 @@
 // src/components/papers/PaperClaimsTab.jsx
 import React, { useState, useEffect } from 'react';
 import { CLAIM_TYPES, DIRECTION_OPTIONS, claimTypeStyle } from './paperUtils';
-
-const API = 'http://localhost:8000';
+import apiClient from '../../api/client';
 
 const EMPTY_FORM = {
   claim_type: 'empirical',
@@ -27,17 +26,40 @@ const EMPTY_FORM = {
 export default function PaperClaimsTab({ paperId }) {
   const [claims, setClaims]       = useState([]);
   const [loading, setLoading]     = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [showForm, setShowForm]   = useState(false);
   const [form, setForm]           = useState(EMPTY_FORM);
   const [saving, setSaving]       = useState(false);
   const [error, setError]         = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
-    fetch(`${API}/api/papers/${paperId}/claims`)
-      .then(r => r.json())
-      .then(data => { setClaims(data); setLoading(false); })
-      .catch(() => setLoading(false));
-  }, [paperId]);
+    let cancelled = false;
+    setLoading(true);
+    setLoadError('');
+
+    apiClient.get(`/papers/${paperId}/claims`)
+      .then(({ data }) => {
+        if (cancelled) return;
+        if (!Array.isArray(data)) throw new Error('Unexpected response from the API');
+        setClaims(data);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        // Show the real reason: a failed request must never look like "no claims".
+        const status = err.response?.status;
+        const detail = err.response?.data?.detail;
+        setLoadError(
+          detail
+            ? `Could not load claims (HTTP ${status}): ${detail}`
+            : `Could not load claims: ${err.message}`
+        );
+        setClaims([]);
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
+
+    return () => { cancelled = true; };
+  }, [paperId, reloadKey]);
 
   const setField = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -53,13 +75,7 @@ export default function PaperClaimsTab({ paperId }) {
         confidence_level: form.confidence_level ? parseFloat(form.confidence_level) : null,
         tags:             form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
       };
-      const res = await fetch(`${API}/api/papers/${paperId}/claims`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error('Failed to save');
-      const created = await res.json();
+      const { data: created } = await apiClient.post(`/papers/${paperId}/claims`, payload);
       setClaims(prev => [created, ...prev]);
       setForm(EMPTY_FORM);
       setShowForm(false);
@@ -73,7 +89,7 @@ export default function PaperClaimsTab({ paperId }) {
   const deleteClaim = async (claimId) => {
     if (!window.confirm('Delete this claim?')) return;
     try {
-      await fetch(`${API}/api/claims/${claimId}`, { method: 'DELETE' });
+      await apiClient.delete(`/claims/${claimId}`);
       setClaims(prev => prev.filter(c => c.claim_id !== claimId));
     } catch {
       alert('Could not delete claim.');
@@ -88,6 +104,25 @@ export default function PaperClaimsTab({ paperId }) {
 
   return (
     <div>
+      {/* Load failures stay visible even when the add form is closed */}
+      {loadError && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          background: '#fee2e2', border: '1px solid #fca5a5', color: '#991b1b',
+          borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 13,
+        }}>
+          <span>⚠</span>
+          <span style={{ flex: 1 }}>{loadError}</span>
+          <button
+            className="action-btn"
+            onClick={() => setReloadKey(k => k + 1)}
+            style={{ borderColor: '#fca5a5', color: '#991b1b' }}
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       {/* Toolbar */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
@@ -231,7 +266,16 @@ export default function PaperClaimsTab({ paperId }) {
 
       {/* Claims list */}
       {claims.length === 0 ? (
-        <p className="empty-state">No claims yet — add the first one.</p>
+        loadError ? null : (
+          <div className="empty-state" style={{ lineHeight: 1.6 }}>
+            <div style={{ marginBottom: 4 }}>No claims stored for this paper yet.</div>
+            <div style={{ fontSize: 12 }}>
+              Claims are produced by the AI enrichment (the <strong>✨ AI Enrichment</strong> button
+              in the sidebar), which only processes papers marked as <em>read</em>. You can also add
+              one manually with <strong>+ Add claim</strong>.
+            </div>
+          </div>
+        )
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {claims.map(c => {

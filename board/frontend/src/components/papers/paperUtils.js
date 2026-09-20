@@ -1,17 +1,8 @@
 // src/components/papers/paperUtils.js
-
-export const STATUS_OPTIONS = [
-  { value: 'unread',     label: 'Unread' },
-  { value: 'reading',    label: 'Reading' },
-  { value: 'read',       label: 'Read' },
-  { value: 'processed',  label: 'Processed' },
-  { value: 'archived',   label: 'Archived' },
-];
-
-export const DOCUMENT_TYPES = [
-  'journal_article', 'book', 'book_chapter', 'working_paper',
-  'dissertation', 'report', 'policy_document', 'historical_document', 'other',
-];
+//
+// NOTE: papers have no reading "status" — reading progress is `is_read` /
+// `date_read` (see PaperRow) and `papers.status` belongs to the AI enrichment
+// pipeline, so it is not surfaced in the UI.
 
 export const CLAIM_TYPES = [
   { value: 'empirical',      label: 'Empirical',      color: '#3b82f6' },
@@ -32,17 +23,6 @@ export const ANNOTATION_COLORS = {
   purple: { bg: '#ede9fe', text: '#5b21b6', border: '#c4b5fd' },
 };
 
-export function statusBadgeStyle(status) {
-  const map = {
-    unread:    { background: '#f1f5f9', color: '#64748b' },
-    reading:   { background: '#fef9c3', color: '#ca8a04' },
-    read:      { background: '#dcfce7', color: '#16a34a' },
-    processed: { background: '#dbeafe', color: '#2563eb' },
-    archived:  { background: '#e2e8f0', color: '#475569' },
-  };
-  return map[status] || map.unread;
-}
-
 export function claimTypeStyle(claimType) {
   const found = CLAIM_TYPES.find(c => c.value === claimType);
   return found ? { background: found.color + '20', color: found.color } : {};
@@ -57,45 +37,54 @@ export function formatAuthors(authors = []) {
   return (authors[0].last_name ?? authors[0].full_name) + ' et al.';
 }
 
+// `document_type` stores Zotero's own item type (camelCase), so the labels are
+// Zotero's vocabulary rather than a normalised one.
+const DOCUMENT_TYPE_LABELS = {
+  artwork:             'Artwork',
+  audioRecording:      'Audio Recording',
+  bill:                'Bill',
+  blogPost:            'Blog Post',
+  book:                'Book',
+  bookSection:         'Book Section',
+  case:                'Case',
+  conferencePaper:     'Conference Paper',
+  dataset:             'Dataset',
+  dictionaryEntry:     'Dictionary Entry',
+  document:            'Document',
+  email:               'E-mail',
+  encyclopediaArticle: 'Encyclopedia Article',
+  film:                'Film',
+  forumPost:           'Forum Post',
+  hearing:             'Hearing',
+  instantMessage:      'Instant Message',
+  interview:           'Interview',
+  journalArticle:      'Journal Article',
+  letter:              'Letter',
+  magazineArticle:     'Magazine Article',
+  manuscript:          'Manuscript',
+  map:                 'Map',
+  newspaperArticle:    'Newspaper Article',
+  patent:              'Patent',
+  podcast:             'Podcast',
+  preprint:            'Preprint',
+  presentation:        'Presentation',
+  radioBroadcast:      'Radio Broadcast',
+  report:              'Report',
+  software:            'Software',
+  standard:            'Standard',
+  statute:             'Statute',
+  thesis:              'Thesis',
+  tvBroadcast:         'TV Broadcast',
+  videoRecording:      'Video Recording',
+  webpage:             'Web Page',
+  other:               'Other',
+};
+
 export function formatDocType(type) {
-  const map = {
-    artwork: 'Artwork',
-    audioRecording: 'Audio Recording',
-    bill: 'Bill',
-    blogPost: 'Blog Post',
-    book:               'Book',
-    bookSection: 'Book Section',
-    case: 'Case',
-    conferencePaper: 'Conference Paper',
-    dictionaryEntry: 'Dictionary Entry',
-    document: 'Document',
-    eMail: 'E-mail',
-    encyclopediaArticle: 'Encyclopedia Article',
-    film: 'Film',
-    forumPost: 'Forum Post',
-    hearing: 'Hearing',
-    instantMessage: 'Instant Message',
-    interview: 'Interview',
-    journalArticle: 'Journal Article',
-    letter: 'Letter',
-    magazineArticle: 'Magazine Article',
-    manuscript: 'Manuscript',
-    map: 'Map',
-    newspaperArticle: 'Newspaper article',
-    patent: 'Patent',
-    preprint: 'Preprint',
-    presentation: 'Presentation',
-    radioAroadcast: 'Radio Broadcast',
-    report: 'Report',
-    sofware: 'Software',
-    standard: 'Standard',
-    statute: 'Statute',
-    thesis: 'Thesis',
-    tvBroadcast: 'TV Broadcast',
-    videoRecording: 'Video Recording',
-    webPage: 'Web Page',
-    dataset: 'Dataset',
-    other:              'Other',
-  };
-  return map[type] || type;
+  if (!type) return '—';
+  if (DOCUMENT_TYPE_LABELS[type]) return DOCUMENT_TYPE_LABELS[type];
+  // Unknown/new Zotero type: "audioRecording" -> "Audio Recording"
+  return type
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/^./, c => c.toUpperCase());
 }

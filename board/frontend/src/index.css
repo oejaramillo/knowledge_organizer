@@ -1,11 +1,14 @@
 :root {
   --bg-main: #f8fafc;
   --bg-white: #ffffff;
+  --bg-hover: #f1f5f9;
   --text-main: #1e293b;
   --text-muted: #64748b;
   --border-color: #e2e8f0;
   --accent-blue: #3b82f6;
   --accent-bg: #eff6ff;
+  --danger: #ef4444;
+  --success: #22c55e;
 }
 
 body {
@@ -50,7 +53,15 @@ body {
   width: 8px;
   height: 8px;
   border-radius: 50%;
+  background: var(--border-color);
+  flex-shrink: 0;
 }
+
+/* Project status colours (used as `status-dot dot-${status}`) */
+.dot-active    { background: #22c55e; }
+.dot-paused    { background: #f59e0b; }
+.dot-completed { background: #3b82f6; }
+.dot-archived  { background: #94a3b8; }
 
 /* --- PROJECT DETAIL (Main pane) --- */
 .detail-container {
@@ -251,17 +262,9 @@ html, body {
 .link-badge--task    { background: #ede9fe; color: #7c3aed; }
 .link-badge--meeting { background: #fce7f3; color: #db2777; }
 
-/* Ensure MainLayout fills the full root */
-.flex {
-  width: 25%;
-}
-
-/* Force the app shell to fill and split correctly */
-#root > * {
-  width: 100%;
+/* Force root to fill the viewport; `.app-shell` handles the internal layout */
+#root {
   height: 100%;
-  display: flex;
-  flex-direction: row;
 }
 
 
@@ -500,4 +503,196 @@ html, body {
   font-size: 15px;
   cursor: pointer;
   padding: 0 4px;
+}
+
+/* ============================================================================
+ * APP SHELL
+ * Sidebar + scrollable main pane. Previously these were Tailwind utility
+ * classes ("flex h-screen w-64 flex-1"), but Tailwind is not wired into the
+ * build, so the shell relied on a `#root > *` hack and collapsed on narrow
+ * screens. They are real classes now.
+ * ========================================================================== */
+.app-shell {
+  display: flex;
+  flex-direction: row;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-main);
+}
+
+.app-sidebar {
+  display: flex;
+  flex-direction: column;
+  width: 256px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border-color);
+  background: var(--bg-white);
+  overflow-y: auto;
+}
+
+.app-main {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+}
+
+@media (max-width: 720px) {
+  .app-sidebar {
+    width: 200px;
+  }
+}
+
+/* ============================================================================
+ * FORM CONTROLS
+ * `.form-input` is used by almost every form in the app but was never defined.
+ * ========================================================================== */
+.form-input {
+  appearance: none;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 7px 11px;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text-main);
+  background: var(--bg-white);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.form-input::placeholder {
+  color: #94a3b8;
+}
+
+.form-input:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+.form-input:disabled {
+  background: var(--bg-main);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+select.form-input {
+  cursor: pointer;
+  padding-right: 26px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--text-muted) 50%),
+                    linear-gradient(135deg, var(--text-muted) 50%, transparent 50%);
+  background-position: calc(100% - 14px) 52%, calc(100% - 9px) 52%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+
+textarea.form-input {
+  resize: vertical;
+  min-height: 38px;
+}
+
+/* Small inline "add" action used in section headers */
+.add-btn {
+  appearance: none;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--accent-blue);
+  background: transparent;
+  color: var(--accent-blue);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.add-btn:hover:not(:disabled) {
+  background: var(--accent-bg);
+}
+
+.add-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Primary action inside a form */
+.submit-btn {
+  appearance: none;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent-blue);
+  color: #fff;
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+
+.submit-btn:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Active state for the project section buttons */
+.action-btn--active {
+  background: var(--accent-bg);
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+  font-weight: 600;
+}
+
+/* Vertical form used by the meetings panel */
+.idea-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-main);
+}
+
+/* ============================================================================
+ * PROJECT CARDS (unused by the current routes, kept consistent with the rest)
+ * ========================================================================== */
+.project-card {
+  background: var(--bg-white);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 18px 20px;
+  transition: box-shadow 0.15s, transform 0.15s;
+}
+
+.project-card:hover {
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+  transform: translateY(-1px);
+}
+
+.project-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.project-card__header h3 {
+  margin: 0;
+  font-size: 15px;
+  color: var(--text-main);
+}
+
+.project-card__date,
+.project-type {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 6px 0 0;
 }

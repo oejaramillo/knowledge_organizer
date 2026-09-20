@@ -11,9 +11,19 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 
+def _database_url() -> str:
+    """Return the configured connection string or fail with a clear message."""
+    if not DATABASE_URL:
+        raise RuntimeError(
+            "DATABASE_URL is not set. Add it to the project .env file "
+            "(see .env.example)."
+        )
+    return DATABASE_URL
+
+
 @contextmanager
 def get_db_connection():
-    with psycopg.connect(DATABASE_URL, row_factory=dict_row) as conn:
+    with psycopg.connect(_database_url(), row_factory=dict_row) as conn:
         yield conn
 
 

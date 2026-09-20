@@ -1,5 +1,6 @@
 import React from 'react';
-import { labelStyle, EMPTY_FORM } from './taskUtils';
+import { labelStyle } from './taskUtils';
+import DateField from '../common/DateField';
 
 export default function TaskForm({ form, setField, editingTask, contributors, submitting, onSubmit, onClose }) {
   return (
@@ -51,11 +52,9 @@ export default function TaskForm({ form, setField, editingTask, contributors, su
           </div>
           <div>
             <label style={labelStyle}>Due Date</label>
-            <input
-              className="form-input"
-              type="date"
-              value={form.due_date}
-              onChange={e => setField('due_date', e.target.value)}
+            <DateField
+              value={form.due}
+              onChange={(next) => setField('due', next)}
             />
           </div>
         </div>

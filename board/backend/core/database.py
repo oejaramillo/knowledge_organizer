@@ -4,8 +4,14 @@ from .config import settings
 
 db_url = settings.DATABASE_URL
 
+if not db_url:
+    raise RuntimeError(
+        "DATABASE_URL is not set. Add it to the project .env file "
+        "(see .env.example)."
+    )
+
 # SQLAlchemy requires "postgresql://" instead of the older "postgres://"
-if db_url and db_url.startswith("postgres://"):
+if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
 
 # pool_pre_ping=True checks if the connection is alive before using it (Crucial for Neon serverless DBs)

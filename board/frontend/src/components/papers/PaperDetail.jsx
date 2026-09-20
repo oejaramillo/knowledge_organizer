@@ -1,9 +1,9 @@
 // src/components/papers/PaperDetail.jsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import PaperClaimsTab from './PaperClaimsTab';
 import PaperAnnotationsTab from './PaperAnnotationTab';
 import PaperPartsTab from './PaperPartsTab';
-import AuthorPopover from './AuthorPopover';
+import AuthorPanel from '../authors/AuthorPanel';
 import apiClient from '../../api/client'
 
 const TABS = ['Overview', 'Parts', 'Claims', 'Annotations'];
@@ -20,8 +20,8 @@ export default function PaperDetail({ paper, onUpdate, hideAuthors = false }) {
     pages_read: paper.pages_read ?? 0,
   });
 
-  const [activeAuthor, setActiveAuthor] = useState(null); // { id, ref }
-  const chipRefs = useRef({});
+  // Id of the author whose side panel is open (null = closed)
+  const [activeAuthorId, setActiveAuthorId] = useState(null);
 
   useEffect(() => {
     setForm({
@@ -34,17 +34,12 @@ export default function PaperDetail({ paper, onUpdate, hideAuthors = false }) {
     });
   }, [paper.paper_id]);
 
-  const setField = (field, value) => setForm(f => ({ ...f, [field]: value }));
+  // Close the author panel when a different paper is opened
+  useEffect(() => {
+    setActiveAuthorId(null);
+  }, [paper.paper_id]);
 
-  const toggleArray = (field, value) => {
-    setForm(f => {
-      const arr = f[field] || [];
-      return {
-        ...f,
-        [field]: arr.includes(value) ? arr.filter(v => v !== value) : [...arr, value],
-      };
-    });
-  };
+  const setField = (field, value) => setForm(f => ({ ...f, [field]: value }));
 
   const save = async () => {
     setSaving(true);
@@ -69,22 +64,39 @@ export default function PaperDetail({ paper, onUpdate, hideAuthors = false }) {
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
-        {TABS.map(tab => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            style={{
-              padding: '5px 14px', fontSize: 13, borderRadius: 6,
-              border: '1px solid var(--border-color)', cursor: 'pointer',
-              background: activeTab === tab ? 'var(--accent-blue)' : 'var(--bg-white)',
-              color:      activeTab === tab ? '#fff' : 'var(--text-muted)',
-              fontWeight: activeTab === tab ? 600 : 400,
-              transition: 'all 0.15s',
-            }}
-          >
-            {tab}
-          </button>
-        ))}
+        {TABS.map(tab => {
+          const counts = {
+            Parts:       paper.parts?.length,
+            Claims:      paper.n_claims,
+            Annotations: paper.n_annotations,
+          };
+          const count = counts[tab];
+          return (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              title={count != null ? `${count} ${tab.toLowerCase()}` : undefined}
+              style={{
+                padding: '5px 14px', fontSize: 13, borderRadius: 6,
+                border: '1px solid var(--border-color)', cursor: 'pointer',
+                background: activeTab === tab ? 'var(--accent-blue)' : 'var(--bg-white)',
+                color:      activeTab === tab ? '#fff' : 'var(--text-muted)',
+                fontWeight: activeTab === tab ? 600 : 400,
+                transition: 'all 0.15s',
+              }}
+            >
+              {tab}
+              {count != null && (
+                <span style={{
+                  marginLeft: 6, fontSize: 11, fontWeight: 600,
+                  opacity: count > 0 ? 0.9 : 0.55,
+                }}>
+                  {count}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* ── OVERVIEW TAB ── */}
@@ -102,36 +114,37 @@ export default function PaperDetail({ paper, onUpdate, hideAuthors = false }) {
                 <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>No authors synced</p>
               ) : (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
-                  {authorsList.map(pa => (
-                    <span
-                      key={pa.author_id}
-                      ref={el => chipRefs.current[pa.author_id] = el}
-                      onClick={() => setActiveAuthor(
-                        activeAuthor?.id === pa.author_id ? null : { id: pa.author_id, ref: { current: chipRefs.current[pa.author_id] } }
-                      )}
-                      style={{
-                        ...authorChipStyle,
-                        cursor: 'pointer',
-                        background: activeAuthor?.id === pa.author_id ? 'var(--accent-bg)' : '#f1f5f9',
-                        borderColor: activeAuthor?.id === pa.author_id ? 'var(--accent-blue)' : 'var(--border-color)',
-                        color: activeAuthor?.id === pa.author_id ? 'var(--accent-blue)' : 'var(--text-main)',
-                      }}
-                    >
-                      {pa.full_name}
-                      {pa.institution && (
-                        <span style={{ color: 'var(--text-muted)', marginLeft: 4 }}>· {pa.institution}</span>
-                      )}
-                    </span>
-                  ))}
+                  {authorsList.map(pa => {
+                    const isActive = activeAuthorId === pa.author_id;
+                    return (
+                      <button
+                        key={pa.author_id}
+                        type="button"
+                        onClick={() => setActiveAuthorId(isActive ? null : pa.author_id)}
+                        title={`Show ${pa.full_name}`}
+                        style={{
+                          ...authorChipStyle,
+                          cursor: 'pointer',
+                          background: isActive ? 'var(--accent-bg)' : '#f1f5f9',
+                          borderColor: isActive ? 'var(--accent-blue)' : 'var(--border-color)',
+                          color: isActive ? 'var(--accent-blue)' : 'var(--text-main)',
+                        }}
+                      >
+                        {pa.full_name}
+                        {pa.institution && (
+                          <span style={{ color: 'var(--text-muted)', marginLeft: 4 }}>· {pa.institution}</span>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
 
-              {/* Author popover */}
-              {activeAuthor && (
-                <AuthorPopover
-                  authorId={activeAuthor.id}
-                  anchorRef={activeAuthor.ref}
-                  onClose={() => setActiveAuthor(null)}
+              {/* Author side panel */}
+              {activeAuthorId && (
+                <AuthorPanel
+                  authorId={activeAuthorId}
+                  onClose={() => setActiveAuthorId(null)}
                 />
               )}
             </div>
@@ -315,6 +328,7 @@ const labelStyle = {
 };
 
 const authorChipStyle = {
+  fontFamily: 'inherit',
   fontSize: 12,
   padding: '3px 10px',
   borderRadius: 999,

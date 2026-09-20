@@ -1,6 +1,7 @@
 import re
 
 from db import get_db_connection
+from utils import announce
 
 
 def extract_year(date_str):
@@ -12,12 +13,7 @@ def extract_year(date_str):
 
 
 def sync_papers(client, since=None, since_date=None):
-    label = (
-        f"(incremental since v{since})" if since is not None
-        else f"(incremental since {since_date})" if since_date is not None
-        else "(full sync)"
-    )
-    print(f"Syncing papers... {label}")
+    announce("papers", since=since, since_date=since_date)
 
     items = client.get_top_level_items(since=since, since_date=since_date)
 
@@ -42,6 +38,15 @@ def sync_papers(client, since=None, since_date=None):
 
                 title = data.get("title") or "Untitled"
 
+                # NOTE: `document_type` stores Zotero's own item type verbatim
+                # (camelCase: "journalArticle", "bookSection", ...). The API, the
+                # dashboard and the enrichment tool all rely on that vocabulary,
+                # so do not translate it to snake_case here.
+                #
+                # `status` is deliberately NOT written: it belongs to the AI
+                # enrichment pipeline. Reading progress lives in `is_read`.
+                document_type = data.get("itemType") or "document"
+
                 cur.execute(
                     """
                     INSERT INTO papers (
@@ -55,10 +60,9 @@ def sync_papers(client, since=None, since_date=None):
                         pages,
                         abstract,
                         url,
-                        document_type,
-                        status
+                        document_type
                     )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'unread')
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     ON CONFLICT (zotero_key)
                     DO UPDATE SET
                         title = EXCLUDED.title,
@@ -85,7 +89,7 @@ def sync_papers(client, since=None, since_date=None):
                         data.get("pages"),
                         data.get("abstractNote"),
                         data.get("url"),
-                        data.get("itemType") 
+                        document_type
                     ),
                 )
 

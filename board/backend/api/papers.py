@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from typing import List
 from uuid import UUID
 
@@ -23,6 +23,7 @@ router = APIRouter(
 )
 
 @router.patch("/{paper_id}", response_model=PaperResponse)
+@router.put("/{paper_id}", response_model=PaperResponse)
 def update_paper(paper_id: UUID, patch: PaperUpdate, db: Session = Depends(get_db)):
     paper = db.query(Paper).filter(Paper.paper_id == paper_id).first()
     if not paper:
@@ -55,7 +56,9 @@ def get_all_papers(db: Session = Depends(get_db)):
     """
     Fetch the entire library of papers.
     """
-    return db.query(Paper).all()
+    # `authors` is eager by default (selectin); `parts` needs an explicit hint
+    # so the response model does not trigger one query per paper.
+    return db.query(Paper).options(selectinload(Paper.parts)).all()
 
 @router.get("/{paper_id}", response_model=PaperResponse)
 def get_paper(paper_id: UUID, db: Session = Depends(get_db)):
@@ -65,17 +68,6 @@ def get_paper(paper_id: UUID, db: Session = Depends(get_db)):
     paper = db.query(Paper).filter(Paper.paper_id == paper_id).first()
     if not paper:
         raise HTTPException(status_code=404, detail="Paper not found")
-    return paper
-
-@router.put("/{paper_id}", response_model=PaperResponse)
-def update_paper(paper_id: UUID, patch: PaperUpdate, db: Session = Depends(get_db)):
-    paper = db.query(Paper).filter(Paper.paper_id == paper_id).first()
-    if not paper:
-        raise HTTPException(status_code=404, detail="Paper not found")
-    for k, v in patch.model_dump(exclude_unset=True).items():
-        setattr(paper, k, v)
-    db.commit()
-    db.refresh(paper)
     return paper
 
 @router.get("/{paper_id}/claims", response_model=List[ClaimResponse])

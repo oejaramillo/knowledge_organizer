@@ -2,6 +2,7 @@ import json
 import re
 
 from db import get_db_connection
+from utils import announce
 
 
 def parse_page_number(page_label):
@@ -63,12 +64,7 @@ def normalize_annotation(data):
 
 
 def sync_annotations(client, since=None, since_date=None):
-    label = (
-        f"(incremental since v{since})" if since is not None
-        else f"(incremental since {since_date})" if since_date is not None
-        else "(full sync)"
-    )
-    print(f"Syncing annotations... {label}")
+    announce("annotations", since=since, since_date=since_date)
 
     annotations = client.get_annotations(since=since, since_date=since_date)
 

@@ -1,11 +1,10 @@
 // src/components/papers/PaperList.jsx
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import PaperRow from './PaperRow';
-import { STATUS_OPTIONS, DOCUMENT_TYPES } from './paperUtils';
+import { formatDocType } from './paperUtils';
 
 export default function PaperList({ paperAssociations = [] }) {
   const [search, setSearch]         = useState('');
-  const [filterStatus, setStatus]   = useState('');
   const [filterType, setType]       = useState('');
   const [filterRead, setRead]       = useState('');   // '', 'read', 'unread'
   const [sortBy, setSortBy]         = useState('year_desc');
@@ -46,6 +45,13 @@ export default function PaperList({ paperAssociations = [] }) {
 
     return list;
   }, [localPapers, search, filterType, filterRead, sortBy]);
+
+  // Types are derived from the loaded papers: `document_type` stores Zotero's
+  // own item types, so a hard-coded list would go stale as the library grows.
+  const availableTypes = useMemo(
+    () => [...new Set(localPapers.map(p => p.document_type).filter(Boolean))].sort(),
+    [localPapers]
+  );
 
   const readCount  = localPapers.filter(p => p.is_read).length;
   const totalCount = localPapers.length;
@@ -149,8 +155,8 @@ export default function PaperList({ paperAssociations = [] }) {
           onChange={e => setType(e.target.value)}
         >
           <option value="">All types</option>
-          {DOCUMENT_TYPES.map(t => (
-            <option key={t} value={t}>{t.replace('_', ' ')}</option>
+          {availableTypes.map(t => (
+            <option key={t} value={t}>{formatDocType(t)}</option>
           ))}
         </select>
         <select
@@ -172,7 +178,6 @@ export default function PaperList({ paperAssociations = [] }) {
           <option value="year_desc">Year ↓</option>
           <option value="year_asc">Year ↑</option>
           <option value="title">Title A–Z</option>
-          <option value="status">Status</option>
         </select>
       </div>
 

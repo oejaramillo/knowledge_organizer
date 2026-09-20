@@ -1,7 +1,9 @@
 // pages/SummaryPage.jsx
 import React, { useEffect, useState } from 'react';
 import apiClient from '../api/client';
+import { formatDate } from '../utils/date';
 
+// `document_type` stores Zotero's own item type (camelCase).
 const TYPE_LABELS = {
   journalArticle:   'Journal Article',
   book:             'Book',
@@ -10,10 +12,15 @@ const TYPE_LABELS = {
   conferencePaper:  'Conference Paper',
   presentation:     'Presentation',
   report:           'Report',
+  preprint:         'Preprint',
+  dataset:          'Dataset',
   webpage:          'Webpage',
   newspaperArticle: 'Newspaper Article',
+  magazineArticle:  'Magazine Article',
   blogPost:         'Blog Post',
   manuscript:       'Manuscript',
+  document:         'Document',
+  letter:           'Letter',
   unknown:          'Other',
 };
 
@@ -25,10 +32,15 @@ const TYPE_COLORS = {
   conferencePaper:  '#10b981',
   presentation:     '#f59e0b',
   report:           '#ef4444',
+  preprint:         '#14b8a6',
+  dataset:          '#0ea5e9',
   webpage:          '#6b7280',
   newspaperArticle: '#f97316',
+  magazineArticle:  '#fb923c',
   blogPost:         '#ec4899',
   manuscript:       '#84cc16',
+  document:         '#64748b',
+  letter:           '#a3a3a3',
   unknown:          '#d1d5db',
 };
 
@@ -90,7 +102,7 @@ export default function SummaryPage() {
   );
 
   const { total_papers, total_read, month_read, year_read,
-        last_read, by_type, top_authors, monthly_trend,
+        last_read, top_authors, monthly_trend,
         pages_total, pages_this_month, pages_last_month, pages_this_year,
         monthly_pages } = stats;
 
@@ -99,7 +111,6 @@ export default function SummaryPage() {
     : 0;
 
   // Max for bar scaling
-  const maxType   = Math.max(...by_type.map(t => t.total_count), 1);
   const maxAuthor = Math.max(...top_authors.map(a => a.count), 1);
   const maxMonth  = Math.max(...monthly_trend.map(m => m.count), 1);
 
@@ -349,7 +360,7 @@ export default function SummaryPage() {
                 </div>
                 {p.date_read && (
                   <div style={{ fontSize: 11, color: 'var(--text-muted)', flexShrink: 0 }}>
-                    {p.date_read}
+                    {formatDate(p.date_read)}
                   </div>
                 )}
               </div>

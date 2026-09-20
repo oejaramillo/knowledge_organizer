@@ -1,8 +1,6 @@
 // src/components/papers/PaperAnnotationsTab.jsx
 import React, { useState, useEffect } from 'react';
-import { ANNOTATION_COLORS } from './paperUtils';
-
-const API = 'http://localhost:8000';
+import apiClient from '../../api/client';
 
 const TYPE_ICONS = {
   highlight: '🖊',
@@ -18,10 +16,10 @@ export default function PaperAnnotationsTab({ paperId }) {
   const [filterType, setFilterType]   = useState('');
 
   useEffect(() => {
-    fetch(`${API}/api/papers/${paperId}/annotations`)
-      .then(r => r.json())
-      .then(data => { setAnnotations(data); setLoading(false); })
-      .catch(() => setLoading(false));
+    apiClient.get(`/papers/${paperId}/annotations`)
+      .then(({ data }) => setAnnotations(data))
+      .catch(() => setAnnotations([]))
+      .finally(() => setLoading(false));
   }, [paperId]);
 
   const colors = [...new Set(annotations.map(a => a.color).filter(Boolean))];

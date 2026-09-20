@@ -2,22 +2,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import PaperDetail from './PaperDetail';
 import { formatAuthors, formatDocType } from './paperUtils';
-
-const API = 'http://localhost:8000';
+import DateField from '../common/DateField';
+import { formatDate, todayFields, fieldsToDateString } from '../../utils/date';
+import apiClient from '../../api/client';
 
 export default function PaperRow({ paper, isExpanded, onToggleExpand, onUpdate, hideAuthors = false}) {
   const authors = formatAuthors(paper.authors);
   const [pickingDate, setPickingDate] = useState(false);
-
-  const getLocalTodayString = () => {
-  const d = new Date();
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
-
-  const [dateValue, setDateValue] = useState(() => getLocalTodayString());
+  const [dateFields, setDateFields] = useState(todayFields);
   const popoverRef = useRef(null);
 
   // Close popover on outside click
@@ -35,12 +27,9 @@ export default function PaperRow({ paper, isExpanded, onToggleExpand, onUpdate, 
   const patchPaper = async (fields) => {
     onUpdate(paper.paper_id, fields);
     try {
-      await fetch(`${API}/api/papers/${paper.paper_id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(fields),
-      });
+      await apiClient.patch(`/papers/${paper.paper_id}`, fields);
     } catch {
+      // Revert the optimistic update when the request fails.
       const revert = Object.fromEntries(Object.keys(fields).map(k => [k, paper[k]]));
       onUpdate(paper.paper_id, revert);
     }
@@ -49,7 +38,7 @@ export default function PaperRow({ paper, isExpanded, onToggleExpand, onUpdate, 
   const handleCheckbox = (e) => {
     e.stopPropagation();
     if (!paper.is_read) {
-      setDateValue(getLocalTodayString());
+      setDateFields(todayFields());
       setPickingDate(true);
     } else {
       patchPaper({ is_read: false, date_read: null });
@@ -59,7 +48,7 @@ export default function PaperRow({ paper, isExpanded, onToggleExpand, onUpdate, 
   const handleConfirmDate = (e) => {
     e.stopPropagation();
     setPickingDate(false);
-    patchPaper({ is_read: true, date_read: dateValue });
+    patchPaper({ is_read: true, date_read: fieldsToDateString(dateFields) });
   };
 
   const handleCancelDate = (e) => {
@@ -67,14 +56,7 @@ export default function PaperRow({ paper, isExpanded, onToggleExpand, onUpdate, 
     setPickingDate(false);
   };
 
-  const readDate = paper.date_read
-    ? new Date(paper.date_read).toLocaleDateString('en-GB', { 
-        day: '2-digit', 
-        month: 'short', 
-        year: 'numeric',
-        timeZone: 'UTC' // <--- Forces JS to display the UTC date instead of converting to your local time
-      })
-    : null;
+  const readDate = formatDate(paper.date_read);
 
   return (
     <div
@@ -126,16 +108,7 @@ export default function PaperRow({ paper, isExpanded, onToggleExpand, onUpdate, 
               <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-main)' }}>
                 When did you finish reading?
               </span>
-              <input
-                type="date"
-                value={dateValue}
-                onChange={e => setDateValue(e.target.value)}
-                style={{
-                  padding: '5px 8px', borderRadius: 6, fontSize: 13,
-                  border: '1px solid var(--border-color)', outline: 'none',
-                  cursor: 'pointer',
-                }}
-              />
+              <DateField value={dateFields} onChange={setDateFields} autoFocus />
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
                   onClick={handleConfirmDate}
@@ -205,6 +178,32 @@ export default function PaperRow({ paper, isExpanded, onToggleExpand, onUpdate, 
         }}>
           {formatDocType(paper.document_type)}
         </span>
+
+        {/* Claims / annotations already extracted for this paper */}
+        {paper.n_claims > 0 && (
+          <span
+            title={`${paper.n_claims} claims`}
+            style={{
+              fontSize: 11, padding: '2px 8px', borderRadius: 999, flexShrink: 0,
+              background: 'var(--accent-bg)', color: 'var(--accent-blue)',
+              fontWeight: 600, whiteSpace: 'nowrap',
+            }}
+          >
+            💡 {paper.n_claims}
+          </span>
+        )}
+        {paper.n_annotations > 0 && (
+          <span
+            title={`${paper.n_annotations} annotations`}
+            style={{
+              fontSize: 11, padding: '2px 8px', borderRadius: 999, flexShrink: 0,
+              background: '#f1f5f9', color: 'var(--text-muted)',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            🖊 {paper.n_annotations}
+          </span>
+        )}
 
         {/* Chevron */}
         <span style={{ color: 'var(--text-muted)', fontSize: 12, flexShrink: 0 }}>

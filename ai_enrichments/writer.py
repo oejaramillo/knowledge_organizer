@@ -70,6 +70,9 @@ def write_enrichment(paper_id: str, parsed: dict, has_abstract: bool = True) -> 
                 )
 
             # ── 2. Insert claims ───────────────────────────────────────────
+            # `claims` has no natural unique key, so idempotency is enforced with
+            # a NOT EXISTS guard on (paper_id, claim): re-running --force never
+            # duplicates the claims that are already stored for the paper.
             claim_ids = []
             for c in claims:
                 cur.execute(
@@ -81,14 +84,16 @@ def write_enrichment(paper_id: str, parsed: dict, has_abstract: bool = True) -> 
                         logical_form, scope_conditions,
                         historical_period, geographic_scope, tags
                     )
-                    VALUES (
+                    SELECT
                         %s, %s, %s, %s,
                         %s, %s, %s,
                         %s, %s, %s,
                         %s, %s,
                         %s, %s, %s
+                    WHERE NOT EXISTS (
+                        SELECT 1 FROM claims
+                        WHERE paper_id = %s AND claim = %s
                     )
-                    ON CONFLICT DO NOTHING
                     RETURNING claim_id
                     """,
                     (
@@ -107,6 +112,8 @@ def write_enrichment(paper_id: str, parsed: dict, has_abstract: bool = True) -> 
                         c["historical_period"],
                         c["geographic_scope"],
                         c["tags"] or None,
+                        paper_id,
+                        c["claim"],
                     ),
                 )
                 row = cur.fetchone()

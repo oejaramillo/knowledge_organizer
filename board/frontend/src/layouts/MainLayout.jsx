@@ -126,11 +126,11 @@ export default function MainLayout({ projectType, onToggle }) {
   return (
     /* ── MAIN LAYOUT CONTAINER ──────────────────────────────────────────────
      * Full-screen flex layout with sidebar + main content */
-    <div className="flex h-screen bg-slate-50 overflow-hidden">
+    <div className="app-shell">
 
       {/* ── LEFT SIDEBAR PANEL ─────────────────────────────────────────────
        * Contains project filtering, navigation, and tool access */}
-      <aside className="w-64 border-r border-slate-200 flex flex-col overflow-y-auto">
+      <aside className="app-sidebar">
 
         {/* ── PROJECT TYPE TOGGLE ────────────────────────────────────────
          * Switch between research and collection project types */}
@@ -413,7 +413,7 @@ export default function MainLayout({ projectType, onToggle }) {
 
       {/* ── MAIN CONTENT AREA ─────────────────────────────────────────────────
        * Router outlet for dynamic content rendering */}
-      <main className="flex-1 overflow-y-auto">
+      <main className="app-main">
         <Outlet />
       </main>
     </div>

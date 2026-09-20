@@ -3,6 +3,10 @@
 -- PostgreSQL Schema v2.0
 -- Pluralist: quantitative, theoretical, qualitative,
 --            historical, sociological, philosophical
+--
+-- NOTE: this file is only the *base* schema. Run `python app.py` (or apply
+--       migrations/*.sql in order) afterwards to get the columns, tables,
+--       indexes and views used by the dashboard and the enrichment pipeline.
 -- ============================================================
 
 -- Enable required extensions
@@ -43,19 +47,11 @@ CREATE TABLE papers (
     pdf_path             TEXT,
     url                  TEXT,
 
-    -- Document type (books, chapters, reports, etc.)
-    document_type        TEXT DEFAULT 'journal_article'
-                         CHECK (document_type IN (
-                             'journal_article',
-                             'book',
-                             'book_chapter',
-                             'working_paper',
-                             'dissertation',
-                             'report',
-                             'policy_document',
-                             'historical_document',
-                             'other'
-                         )),
+    -- Document type. Stores Zotero's own item type verbatim
+    -- ("journalArticle", "bookSection", "dataset", ...). There is deliberately
+    -- no CHECK constraint: Zotero adds new item types over time and the sync
+    -- tool writes whatever the library contains.
+    document_type        TEXT DEFAULT 'journalArticle',
 
     -- Disciplinary scope
     discipline           TEXT[],   -- ['economics','sociology','philosophy', ...]

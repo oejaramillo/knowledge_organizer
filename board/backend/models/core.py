@@ -3,16 +3,19 @@ from sqlalchemy import (
     Text, 
     Integer, 
     Boolean, 
+    Date,
     ForeignKey, 
     DateTime, 
     ARRAY, 
     SmallInteger, 
     Table,
-    Float
+    Float,
+    func,
+    select,
 )
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.sql import func
-from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.sql import func as sql_func
+from sqlalchemy.orm import relationship, column_property
 from core.database import Base
 import uuid
 
@@ -214,16 +217,19 @@ class Paper(Base):
     language = Column(Text, default="en")
     pdf_path = Column(Text, nullable=True)
     url = Column(Text, nullable=True)
-    date_read  = Column(DateTime(timezone=True), nullable=True)
+    date_read  = Column(Date, nullable=True)
     rating     = Column(SmallInteger, nullable=True)   # 1–5, NULL = unrated
     is_digital = Column(Boolean, default=False)
     is_print   = Column(Boolean, default=False)
     notes = Column(Text, nullable=True)
 
-    document_type = Column(Text, default="journal_article")
+    # Zotero's own item type ("journalArticle", "bookSection", "dataset", ...)
+    document_type = Column(Text, default="journalArticle")
     discipline = Column(ARRAY(Text), nullable=True)
     theoretical_framework = Column(Text, nullable=True)
-    status = Column(Text, default="unread")
+    # AI enrichment state only: 'pending' | 'processed'.
+    # Reading progress is tracked by `is_read` / `date_read` / `pages_read`.
+    status = Column(Text, default="pending")
     citation_intent = Column(ARRAY(Text), nullable=True)
 
     replication_available = Column(Boolean, default=False)
@@ -239,11 +245,14 @@ class Paper(Base):
         cascade="all, delete-orphan"
     )
 
+    # Single canonical definition: ordered by author position (1 = first author)
+    # and eagerly loaded so paper lists do not issue one query per row.
     authors = relationship(
         "Author",
         secondary=paper_authors_table,
+        back_populates="papers",
         order_by=paper_authors_table.c.position,
-        lazy="selectin"
+        lazy="selectin",
     )
 
     claims = relationship(
@@ -256,12 +265,6 @@ class Paper(Base):
         "Annotation", 
         back_populates="paper", 
         cascade="all, delete-orphan"
-    )
-
-    authors = relationship(
-        "Author",
-        secondary=paper_authors_table,
-        back_populates="papers",
     )
 
     parts = relationship(
@@ -360,9 +363,29 @@ class Annotation(Base):
 
     # Extended fields from migrations
     attachment_id         = Column(UUID(as_uuid=True), ForeignKey("attachments.attachment_id", ondelete="SET NULL"), nullable=True)
-    annotation_position   = Column(Text, nullable=True)   # JSONB → Text is fine for now
+    annotation_position   = Column(JSONB, nullable=True)   # annotation geometry, stored as JSONB (see migrations/001)
     annotation_sort_index = Column(Text, nullable=True)
     claim_id              = Column(UUID(as_uuid=True), ForeignKey("claims.claim_id", ondelete="SET NULL"), nullable=True)
 
     paper = relationship("Paper", back_populates="annotations")
     contributor = relationship("Contributor")
+
+# ==========================================
+# DERIVED COUNTS (read-only)
+# ==========================================
+# `Paper` is declared before `Claim`/`Annotation`, so the correlated subqueries
+# are attached once every mapped class exists. They let the dashboard show how
+# many claims/annotations a paper has without an extra round-trip per paper.
+Paper.n_claims = column_property(
+    select(func.count(Claim.claim_id))
+    .where(Claim.paper_id == Paper.paper_id)
+    .correlate_except(Claim)
+    .scalar_subquery()
+)
+
+Paper.n_annotations = column_property(
+    select(func.count(Annotation.annotation_id))
+    .where(Annotation.paper_id == Paper.paper_id)
+    .correlate_except(Annotation)
+    .scalar_subquery()
+)

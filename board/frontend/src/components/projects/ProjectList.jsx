@@ -15,7 +15,7 @@ export default function ProjectList({ projectType }) {
       .finally(() => setLoading(false))
   }, [projectType])  // re-fetch/filter when type changes
 
-  if (loading) return <p className="p-4 text-sm text-slate-400">Loading...</p>
+  if (loading) return <p className="empty-state" style={{ padding: 16 }}>Loading...</p>
 
   return (
     <nav className="project-sidebar-nav">

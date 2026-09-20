@@ -14,7 +14,14 @@ from sync_annotations import sync_annotations
 def reset_sync_state():
     with get_db_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute("UPDATE sync_state SET last_library_version = NULL, last_sync = NULL")
+            cur.execute(
+                """
+                UPDATE sync_state
+                SET last_library_version = NULL, last_sync = NULL
+                WHERE source = %s
+                """,
+                ("zotero",),
+            )
         conn.commit()
     print("Sync state reset — will run full sync.")
 
@@ -84,11 +91,16 @@ def main():
 
     sync_started_at = datetime.now(timezone.utc)
 
-    if "projects"     in run: sync_projects(client,     since=since_v, since_date=since_d)
-    if "papers"       in run: sync_papers(client,       since=since_v, since_date=since_d)
-    if "authors"      in run: sync_authors(client,      since=since_v, since_date=since_d)
-    if "attachments"  in run: sync_attachments(client,  since=since_v, since_date=since_d)
-    if "annotations"  in run: sync_annotations(client,  since=since_v, since_date=since_d)
+    if "projects" in run:
+        sync_projects(client, since=since_v, since_date=since_d)
+    if "papers" in run:
+        sync_papers(client, since=since_v, since_date=since_d)
+    if "authors" in run:
+        sync_authors(client, since=since_v, since_date=since_d)
+    if "attachments" in run:
+        sync_attachments(client, since=since_v, since_date=since_d)
+    if "annotations" in run:
+        sync_annotations(client, since=since_v, since_date=since_d)
 
     # Only advance the sync state when doing a full run
     if not args.only:

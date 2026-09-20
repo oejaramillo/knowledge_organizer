@@ -14,7 +14,7 @@ export const PRIORITY_STYLES = {
 
 export const EMPTY_FORM = {
   title: '', description: '', priority: 'medium',
-  due_date: '', assigned_to: '',
+  due: { day: '', month: '', year: '' }, assigned_to: '',
 };
 
 export const labelStyle = {

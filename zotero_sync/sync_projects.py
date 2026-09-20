@@ -1,13 +1,9 @@
 from db import get_db_connection
+from utils import announce
 
 
 def sync_projects(client, since=None, since_date=None):
-    label = (
-        f"(incremental since v{since})" if since is not None
-        else f"(incremental since {since_date})" if since_date is not None
-        else "(full sync)"
-    )
-    print(f"Syncing collections to projects... {label}")
+    announce("collections to projects", since=since, since_date=since_date)
 
     collections = client.get_collections(since=since, since_date=since_date)
 

@@ -103,13 +103,16 @@ def get_reading_stats(db: Session = Depends(get_db)):
 
     top_authors = db.execute(text("""
         SELECT
-            TRIM(CONCAT(a.first_name, ' ', a.last_name)) AS name,
+            COALESCE(
+                NULLIF(TRIM(CONCAT(a.first_name, ' ', a.last_name)), ''),
+                a.full_name
+            )                                            AS name,
             COUNT(DISTINCT pa.paper_id)                  AS count
         FROM authors a
         JOIN paper_authors pa ON a.author_id = pa.author_id
         JOIN papers p          ON pa.paper_id = p.paper_id
         WHERE p.is_read = true
-        GROUP BY a.author_id, a.first_name, a.last_name
+        GROUP BY a.author_id, a.first_name, a.last_name, a.full_name
         ORDER BY count DESC
         LIMIT 10
     """)).fetchall()

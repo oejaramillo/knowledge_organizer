@@ -92,20 +92,17 @@ export default function ProjectTreeNav( { projectType }) {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    let cancelled = false;
     setLoading(true);
+    setError(null);
     setTree([]);
     apiClient.get('/projects/', { params: { project_type: projectType } })  // ← send filter
-      .then(response => setTree(buildTree(response.data)))
-      .catch(e => setError(e.message))
-      .finally(() => setLoading(false));
-  }, [projectType]);  // ← re-fetch when type changes
+      .then(response => { if (!cancelled) setTree(buildTree(response.data)); })
+      .catch(e => { if (!cancelled) setError(e.message); })
+      .finally(() => { if (!cancelled) setLoading(false); });
 
-  useEffect(() => {
-    apiClient.get('/projects/')
-      .then(response => setTree(buildTree(response.data)))
-      .catch(e => setError(e.message))
-      .finally(() => setLoading(false));
-  }, []);
+    return () => { cancelled = true; };
+  }, [projectType]);  // ← re-fetch when type changes
 
   if (loading) return <div style={{ padding: '12px 16px', fontSize: 13, color: 'var(--text-muted)' }}>Loading…</div>;
   if (error)   return <div style={{ padding: '12px 16px', fontSize: 13, color: '#ef4444' }}>Error: {error}</div>;

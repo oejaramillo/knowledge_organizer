@@ -1,8 +1,7 @@
 from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional, List
 from uuid import UUID
-from datetime import datetime
-from datetime import datetime
+from datetime import date, datetime
 
 
 # ==========================================
@@ -44,6 +43,10 @@ class ProjectContributorBase(BaseModel):
 
 class ProjectContributorCreate(ProjectContributorBase):
     pass
+
+
+class ProjectContributorUpdate(BaseModel):
+    project_role: Optional[str] = None
 
 
 class ProjectContributorResponse(ProjectContributorBase):
@@ -159,7 +162,7 @@ class PaperSummary(BaseModel):
     title:         str
     year:          Optional[int]   = None
     is_digital: Optional[bool] = False
-    date_read:  Optional[datetime] = None
+    date_read:  Optional[date] = None
     rating:     Optional[int] = Field(None, ge=1, le=5)
     is_read: Optional[bool] = False
     journal: Optional[str] = None
@@ -218,21 +221,27 @@ class PaperBase(BaseModel):
     language: Optional[str] = "en"
     pdf_path: Optional[str] = None
     url: Optional[str] = None
-    date_read:  Optional[datetime] = None
+    date_read:  Optional[date] = None
     rating:     Optional[int] = Field(None, ge=1, le=5)
     is_digital: Optional[bool] = False
     is_print: Optional[bool] = False
     notes: Optional[str] = None
     
-    document_type: Optional[str] = "journal_article"
+    document_type: Optional[str] = "journalArticle"
     discipline: Optional[List[str]] = None
     theoretical_framework: Optional[str] = None
-    status: Optional[str] = "unread"
+    # AI enrichment state ('pending' | 'processed') — not part of the reading
+    # workflow, so it is intentionally absent from PaperUpdate.
+    status: Optional[str] = "pending"
     citation_intent: Optional[List[str]] = None
     
     replication_available: Optional[bool] = False
     code_available: Optional[bool] = False
     is_read: Optional[bool] = False
+
+    # Read-only counters derived from claims/annotations (see models/core.py)
+    n_claims: Optional[int] = 0
+    n_annotations: Optional[int] = 0
 
 class PaperCreate(PaperBase):
     pass
@@ -247,8 +256,12 @@ class PaperResponse(PaperBase):
     model_config = ConfigDict(from_attributes=True)
 
 class PaperUpdate(BaseModel):
-    status:               Optional[str] = None
-    date_read:            Optional[datetime] = None
+    """Fields the dashboard may change.
+
+    `status` is intentionally absent: it belongs to the AI enrichment pipeline.
+    Reading progress is expressed through `is_read` / `date_read` / `pages_read`.
+    """
+    date_read:            Optional[date] = None
     rating:               Optional[int] = Field(None, ge=1, le=5)
     is_digital:           Optional[bool] = None
     is_print:             Optional[bool] = None
@@ -355,8 +368,7 @@ class IdeaResponse(BaseModel):
     created_at:     Optional[datetime]
     updated_at:     Optional[datetime]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ==========================================

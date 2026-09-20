@@ -1,24 +1,16 @@
 // components/meetings/MeetingList.jsx
 import { useState } from "react";
 import apiClient from "../../api/client";
+import DateField from "../common/DateField";
+import { formatDate, dateToFields, fieldsToTimestamp } from "../../utils/date";
 
-function formatDate(dateStr) {
-  if (!dateStr) return "";
-  const d = new Date(dateStr);
-  return `${String(d.getUTCDate()).padStart(2,"0")}/${String(d.getUTCMonth()+1).padStart(2,"0")}/${d.getUTCFullYear()}`;
-}
-
-function dateToFields(dateStr) {
-  if (!dateStr) return { day: "", month: "", year: "" };
-  const d = new Date(dateStr);
-  return { day: String(d.getUTCDate()), month: String(d.getUTCMonth()+1), year: String(d.getUTCFullYear()) };
-}
+const EMPTY_FORM = { title: "", day: "", month: "", year: "", summary: "" };
 
 export default function MeetingList({ meetings = [], projectId, fetchProject, projectContributors = [] }) {
   const [showForm, setShowForm]       = useState(false);
   const [submitting, setSubmitting]   = useState(false);
   const [expandedIds, setExpandedIds] = useState(new Set());
-  const [form, setForm]               = useState({ title: "", day: "", month: "", year: "", summary: "" });
+  const [form, setForm]               = useState(EMPTY_FORM);
   const [selectedParticipants, setSelectedParticipants] = useState([]);
 
   // Edit state
@@ -32,7 +24,8 @@ export default function MeetingList({ meetings = [], projectId, fetchProject, pr
   const toggleExpanded = (id) => {
     setExpandedIds(prev => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
@@ -47,14 +40,13 @@ export default function MeetingList({ meetings = [], projectId, fetchProject, pr
     e.preventDefault();
     if (!form.title || !form.day || !form.month || !form.year) return;
     setSubmitting(true);
-    const isoDate = `${form.year}-${String(form.month).padStart(2,"0")}-${String(form.day).padStart(2,"0")}T00:00:00`;
     try {
       await apiClient.post("/meetings/", {
         title: form.title, summary: form.summary,
-        meeting_date: isoDate, project_id: projectId,
+        meeting_date: fieldsToTimestamp(form), project_id: projectId,
         participant_ids: selectedParticipants,
       });
-      setForm({ title: "", day: "", month: "", year: "", summary: "" });
+      setForm(EMPTY_FORM);
       setSelectedParticipants([]);
       setShowForm(false);
       fetchProject();
@@ -79,12 +71,11 @@ export default function MeetingList({ meetings = [], projectId, fetchProject, pr
 
   const handleEditSave = async (meetingId) => {
     setEditSaving(true);
-    const isoDate = `${editForm.year}-${String(editForm.month).padStart(2,"0")}-${String(editForm.day).padStart(2,"0")}T00:00:00`;
     try {
       await apiClient.patch(`/meetings/${meetingId}`, {
         title: editForm.title,
         summary: editForm.summary || null,
-        meeting_date: isoDate,
+        meeting_date: fieldsToTimestamp(editForm),
         participant_ids: editParticipants,
       });
       setEditingId(null);
@@ -106,11 +97,10 @@ export default function MeetingList({ meetings = [], projectId, fetchProject, pr
       {showForm && (
         <form className="idea-form" onSubmit={handleSubmit}>
           <input className="form-input" name="title" placeholder="Meeting title" value={form.title} onChange={handleChange} required />
-          <div style={{ display: "flex", gap: 8 }}>
-            <input className="form-input" name="day"   type="number" placeholder="DD"   min="1" max="31"   value={form.day}   onChange={handleChange} style={{ width: 64 }} required />
-            <input className="form-input" name="month" type="number" placeholder="MM"   min="1" max="12"   value={form.month} onChange={handleChange} style={{ width: 64 }} required />
-            <input className="form-input" name="year"  type="number" placeholder="YYYY" min="2000" max="2100" value={form.year}  onChange={handleChange} style={{ width: 88 }} required />
-          </div>
+          <DateField
+            value={{ day: form.day, month: form.month, year: form.year }}
+            onChange={(next) => setForm(prev => ({ ...prev, ...next }))}
+          />
           <textarea className="form-input" name="summary" placeholder="Summary (optional)" value={form.summary} onChange={handleChange} rows={3} />
           {projectContributors.length > 0 && (
             <div className="participant-selector">
@@ -161,10 +151,11 @@ export default function MeetingList({ meetings = [], projectId, fetchProject, pr
                   <div style={{ padding: "12px 16px", borderTop: "1px solid var(--border-color)", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                     <input className="form-input" placeholder="Title *" value={editForm.title}
                       onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))} style={{ gridColumn: "1 / -1" }} />
-                    <div style={{ gridColumn: "1 / -1", display: "flex", gap: 8 }}>
-                      <input className="form-input" type="number" placeholder="DD"   min="1" max="31"   value={editForm.day}   onChange={e => setEditForm(f => ({ ...f, day: e.target.value }))}   style={{ width: 64 }} />
-                      <input className="form-input" type="number" placeholder="MM"   min="1" max="12"   value={editForm.month} onChange={e => setEditForm(f => ({ ...f, month: e.target.value }))} style={{ width: 64 }} />
-                      <input className="form-input" type="number" placeholder="YYYY" min="2000" max="2100" value={editForm.year}  onChange={e => setEditForm(f => ({ ...f, year: e.target.value }))}  style={{ width: 88 }} />
+                    <div style={{ gridColumn: "1 / -1" }}>
+                      <DateField
+                        value={{ day: editForm.day, month: editForm.month, year: editForm.year }}
+                        onChange={(next) => setEditForm(f => ({ ...f, ...next }))}
+                      />
                     </div>
                     <textarea className="form-input" placeholder="Summary" value={editForm.summary}
                       onChange={e => setEditForm(f => ({ ...f, summary: e.target.value }))}

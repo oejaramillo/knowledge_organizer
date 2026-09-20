@@ -1,16 +1,9 @@
-amb
-amb_no_z
-.env
-zotero_sync/__pycache__
-ai_enrichments/__pycache__
-ai_enrichments/providers/__pycache__
-zotero_sync/__pycache__
-zotero_sync/__pycache__
-zotero_sync/__pycache__/zotero_client.cpython-312.pyc
-board/backend/routers/__pycache__
-board/frontend/.vite/deps
+# Local virtualenvs (the Justfile activates ./amb)
+amb/
+amb_no_z/
 
-Justfile
+# Local Vite cache
+board/frontend/.vite/
 
 # Dependency directories
 node_modules/

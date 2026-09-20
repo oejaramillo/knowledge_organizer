@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import apiClient from '../../api/client';
+import DateField from '../common/DateField';
+import { formatDate, fieldsToTimestamp } from '../../utils/date';
 
 export default function PaperPartsTab({ paperId }) {
   const [parts, setParts]       = useState([]);
@@ -64,11 +66,7 @@ export default function PaperPartsTab({ paperId }) {
     }
   };
 
-  const buildIsoDate = ({ day, month, year }) => {
-    if (day && month && year)
-      return `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}T12:00:00Z`;
-    return new Date().toISOString();
-  };
+  const buildIsoDate = (fields) => fieldsToTimestamp(fields) || new Date().toISOString();
 
   const confirmRead = async (partId) => {
     try {
@@ -175,7 +173,7 @@ export default function PaperPartsTab({ paperId }) {
                 {/* Date read */}
                 {part.is_read && part.date_read && datePicking !== part.part_id && (
                   <span style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                    {new Date(part.date_read).toLocaleDateString('en-GB')}
+                    {formatDate(part.date_read)}
                   </span>
                 )}
 
@@ -212,26 +210,8 @@ export default function PaperPartsTab({ paperId }) {
 
               {/* Inline date picker — appears when checking */}
               {datePicking === part.part_id && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 25 }}>
-                  <input
-                    type="number" placeholder="DD" min="1" max="31"
-                    value={dateForm.day}
-                    onChange={e => setDateForm(f => ({ ...f, day: e.target.value }))}
-                    style={{ width: 52, fontSize: 12, padding: '2px 6px', borderRadius: 6, border: '1px solid var(--border-color)' }}
-                  />
-                  <input
-                    type="number" placeholder="MM" min="1" max="12"
-                    value={dateForm.month}
-                    onChange={e => setDateForm(f => ({ ...f, month: e.target.value }))}
-                    style={{ width: 52, fontSize: 12, padding: '2px 6px', borderRadius: 6, border: '1px solid var(--border-color)' }}
-                  />
-                  <input
-                    type="number" placeholder="YYYY" min="2000" max="2100"
-                    value={dateForm.year}
-                    onChange={e => setDateForm(f => ({ ...f, year: e.target.value }))}
-                    style={{ width: 68, fontSize: 12, padding: '2px 6px', borderRadius: 6, border: '1px solid var(--border-color)' }}
-                  />
-                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>blank = today</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 25, flexWrap: 'wrap' }}>
+                  <DateField value={dateForm} onChange={setDateForm} hint="blank = today" />
                   <button onClick={() => confirmRead(part.part_id)} style={actionBtn('#22c55e')}>✓</button>
                   <button onClick={() => setDatePicking(null)} style={actionBtn('var(--text-muted)')}>✕</button>
                 </div>

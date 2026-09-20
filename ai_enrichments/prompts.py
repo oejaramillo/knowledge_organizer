@@ -123,8 +123,8 @@ def build_user_prompt(
 ```'''  # safe: triple-backticks inside triple-single-quoted string
 
     _abstract_rule = (
-        "- generated_abstract: if the original abstract was 'Not available', write a no bigger than 200-words"
-        "summary of the document based on the annotations and/or full text provided. "
+        "- generated_abstract: if the original abstract was 'Not available', write a summary of at"
+        "most 200 words based on the annotations and/or full text provided. "
         "If an abstract was already provided, set this to null.\n"
     ) if needs_abstract else (
         "- generated_abstract: null (abstract already provided).\n"

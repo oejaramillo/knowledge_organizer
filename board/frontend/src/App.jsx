@@ -31,7 +31,16 @@ function App() {
 
 function EmptyState() {
   return (
-    <div className="flex items-center justify-center h-full text-slate-400 text-sm">
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      height: '100%',
+      padding: 40,
+      color: 'var(--text-muted)',
+      fontSize: 14,
+      textAlign: 'center',
+    }}>
       Select a project to get started
     </div>
   )

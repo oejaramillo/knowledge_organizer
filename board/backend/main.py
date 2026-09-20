@@ -16,23 +16,30 @@ from api import (
 )
 from core.database import get_db
 from core.config import settings
+from core.security import RequireApiTokenMiddleware
 from routers import tools, stats, tracker
 
 
 app = FastAPI(title=settings.PROJECT_TITLE)
 
-# ── CORS CONFIGURATION ──
-# List the origins that are allowed to make requests to your API
-origins = [
-    "http://localhost:5173",  # Vite default port
-    "http://127.0.0.1:5173",
-    "http://localhost:3000",  # Common React port
-]
+# ── AUTHENTICATION (opt-in) ──
+# Registered before CORS on purpose: `add_middleware` prepends, so CORS ends up
+# outermost and even a 401 response carries the CORS headers.
+if settings.API_AUTH_ENABLED:
+    if not settings.API_TOKEN:
+        raise RuntimeError(
+            "API_AUTH_ENABLED is true but API_TOKEN is empty. "
+            "Set API_TOKEN (and VITE_API_TOKEN in the frontend) or disable auth."
+        )
+    app.add_middleware(RequireApiTokenMiddleware, token=settings.API_TOKEN)
 
+# ── CORS CONFIGURATION ──
+# Origins come from CORS_ORIGINS in .env ("*" or a comma-separated list) and
+# fall back to the local Vite/React dev servers (see core/config.py).
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,            # Allows specific origins
-    allow_credentials=True,
+    allow_origins=settings.CORS_ORIGINS,
+    allow_credentials=settings.cors_allow_credentials,
     allow_methods=["*"],              # Allows all methods (GET, POST, etc.)
     allow_headers=["*"],              # Allows all headers
 )
