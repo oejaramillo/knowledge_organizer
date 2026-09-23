@@ -29,6 +29,7 @@ import { Outlet, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import ProjectTreeNav from '../components/projects/ProjectTreeNav';
 import apiClient from '../api/client';
+import { describeSync } from '../utils/syncSummary';
 
 // ── CONFIGURATION CONSTANTS ────────────────────────────────────────────────
 // Available AI providers for enrichment processing
@@ -74,9 +75,9 @@ export default function MainLayout({ projectType, onToggle }) {
       // Call backend API endpoint for Zotero synchronization
       const { data } = await apiClient.post('/tools/zotero-sync');
 
-      // Show success/error feedback based on API response
+      // Report what actually changed, not just that the command exited 0
       showToast(
-        data.ok ? '✅ Zotero sync completed' : `❌ Sync failed: ${data.error}`,
+        data.ok ? describeSync(data.summary) : `❌ Sync failed: ${data.error}`,
         data.ok
       );
     } catch {

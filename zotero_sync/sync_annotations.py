@@ -70,13 +70,26 @@ def sync_annotations(client, since=None, since_date=None):
 
     if not annotations:
         print("No annotation changes detected.")
-        return
+        return 0
 
     synced_annotations = 0
     skipped_annotations = 0
 
     with get_db_connection() as conn:
         with conn.cursor() as cur:
+            # One lookup instead of one SELECT per annotation: a library has
+            # thousands of annotations, and each round-trip to a remote
+            # (Neon) database costs far more than the query itself.
+            cur.execute(
+                """
+                SELECT zotero_attachment_key, attachment_id, paper_id
+                FROM attachments
+                WHERE zotero_attachment_key IS NOT NULL
+                """
+            )
+            attachments_by_key = {r["zotero_attachment_key"]: r for r in cur.fetchall()}
+
+            rows = []
             for item in annotations:
                 data = item.get("data", {})
 
@@ -90,23 +103,29 @@ def sync_annotations(client, since=None, since_date=None):
                     skipped_annotations += 1
                     continue
 
-                cur.execute(
-                    """
-                    SELECT attachment_id, paper_id
-                    FROM attachments
-                    WHERE zotero_attachment_key = %s
-                    """,
-                    (parent_attachment_key,),
-                )
-                attachment_row = cur.fetchone()
-
+                attachment_row = attachments_by_key.get(parent_attachment_key)
                 if not attachment_row:
                     skipped_annotations += 1
                     continue
 
                 normalized = normalize_annotation(data)
 
-                cur.execute(
+                rows.append((
+                    attachment_row["paper_id"],
+                    attachment_row["attachment_id"],
+                    parse_page_number(data.get("annotationPageLabel")),
+                    normalized["highlight_text"],
+                    normalized["user_note"],
+                    data.get("annotationColor"),
+                    normalized["annotation_type"],
+                    parse_annotation_position(data.get("annotationPosition")),
+                    data.get("annotationSortIndex"),
+                    zotero_annotation_key,
+                ))
+
+            if rows:
+                # executemany pipelines the whole batch over one connection.
+                cur.executemany(
                     """
                     INSERT INTO annotations (
                         paper_id,
@@ -134,23 +153,13 @@ def sync_annotations(client, since=None, since_date=None):
                         annotation_sort_index = EXCLUDED.annotation_sort_index,
                         synced_at = NOW()
                     """,
-                    (
-                        attachment_row["paper_id"],
-                        attachment_row["attachment_id"],
-                        parse_page_number(data.get("annotationPageLabel")),
-                        normalized["highlight_text"],
-                        normalized["user_note"],
-                        data.get("annotationColor"),
-                        normalized["annotation_type"],
-                        parse_annotation_position(data.get("annotationPosition")),
-                        data.get("annotationSortIndex"),
-                        zotero_annotation_key,
-                    ),
+                    rows,
                 )
-                synced_annotations += 1
+                synced_annotations = len(rows)
 
             conn.commit()
 
     print(f"Successfully synced {synced_annotations} annotations.")
     if skipped_annotations:
         print(f"Skipped {skipped_annotations} annotations (attachment not found in DB).")
+    return synced_annotations

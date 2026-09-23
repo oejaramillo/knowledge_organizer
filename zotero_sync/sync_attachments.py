@@ -9,13 +9,19 @@ def sync_attachments(client, since=None, since_date=None):
 
     if not attachments:
         print("No attachment changes detected.")
-        return
+        return 0
 
     synced_attachments = 0
     updated_pdf_paths = 0
 
     with get_db_connection() as conn:
         with conn.cursor() as cur:
+            # One lookup for the whole run instead of one SELECT per attachment.
+            cur.execute("SELECT zotero_key, paper_id FROM papers WHERE zotero_key IS NOT NULL")
+            papers_by_key = {r["zotero_key"]: r["paper_id"] for r in cur.fetchall()}
+
+            rows = []
+            pdf_paths = []
             for item in attachments:
                 data = item.get("data", {})
                 links = item.get("links", {})
@@ -29,20 +35,10 @@ def sync_attachments(client, since=None, since_date=None):
                 if not attachment_key or not parent_paper_zotero_key:
                     continue
 
-                cur.execute(
-                    """
-                    SELECT paper_id
-                    FROM papers
-                    WHERE zotero_key = %s
-                    """,
-                    (parent_paper_zotero_key,),
-                )
-                paper_row = cur.fetchone()
-
-                if not paper_row:
+                paper_id = papers_by_key.get(parent_paper_zotero_key)
+                if not paper_id:
                     continue
 
-                paper_id = paper_row["paper_id"]
                 filename = data.get("filename") or data.get("title")
                 mime_type = data.get("contentType")
                 md5 = data.get("md5")
@@ -53,7 +49,13 @@ def sync_attachments(client, since=None, since_date=None):
                     else None
                 )
 
-                cur.execute(
+                rows.append((paper_id, attachment_key, filename, mime_type, file_path, md5))
+
+                if mime_type == "application/pdf" and file_path:
+                    pdf_paths.append((file_path, paper_id))
+
+            if rows:
+                cur.executemany(
                     """
                     INSERT INTO attachments (
                         paper_id,
@@ -72,29 +74,19 @@ def sync_attachments(client, since=None, since_date=None):
                         file_path = EXCLUDED.file_path,
                         md5 = EXCLUDED.md5
                     """,
-                    (
-                        paper_id,
-                        attachment_key,
-                        filename,
-                        mime_type,
-                        file_path,
-                        md5,
-                    ),
+                    rows,
                 )
-                synced_attachments += 1
+                synced_attachments = len(rows)
 
-                if mime_type == "application/pdf" and file_path:
-                    cur.execute(
-                        """
-                        UPDATE papers
-                        SET pdf_path = %s
-                        WHERE paper_id = %s
-                        """,
-                        (file_path, paper_id),
-                    )
-                    updated_pdf_paths += 1
+            if pdf_paths:
+                cur.executemany(
+                    "UPDATE papers SET pdf_path = %s WHERE paper_id = %s",
+                    pdf_paths,
+                )
+                updated_pdf_paths = len(pdf_paths)
 
             conn.commit()
 
     print(f"Successfully synced {synced_attachments} attachments.")
     print(f"Successfully updated {updated_pdf_paths} paper pdf_path values.")
+    return synced_attachments

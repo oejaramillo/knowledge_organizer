@@ -77,6 +77,26 @@ class ZoteroClient:
         self.timeout = timeout
         self.session = requests.Session()
         self.last_library_version: int | None = None
+        self._since_supported: bool | None = None
+
+    # ── Capabilities ─────────────────────────────────────────────────────────
+
+    def supports_since(self) -> bool:
+        """Whether this Zotero API actually honours the ``since`` cursor.
+
+        The Zotero *local* API (10.x) advertises a ``Last-Modified-Version``
+        header but returns an empty list for **every** ``since=`` value, so an
+        "incremental" sync silently syncs nothing while still exiting 0. Probe
+        once per client and let the caller fall back to a full pass when the
+        cursor is not usable.
+        """
+        if self._since_supported is None:
+            try:
+                probe = self._get("users/0/items/top", params={"since": 1, "limit": 1})
+                self._since_supported = bool(probe)
+            except Exception:      # network/HTTP problems: assume the worst
+                self._since_supported = False
+        return self._since_supported
 
     # ── HTTP plumbing ────────────────────────────────────────────────────────
 

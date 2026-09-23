@@ -141,7 +141,42 @@ python sync.py --only projects papers  # re-run selected steps only
 
 Steps run in order: `projects → papers → authors → attachments → annotations`.
 `--only` always fetches the full item list for the selected steps and does not
-advance the sync state.
+advance the cursor.
+
+### How the change cursor works (and its Zotero trap)
+
+The sync fetches only what changed, using whichever cursor the Zotero API can
+actually honour:
+
+| API | Cursor |
+|---|---|
+| Zotero **web** API | library version — `since=<Last-Modified-Version>` |
+| Zotero **local** API | timestamp — everything modified since the previous run started |
+
+**The Zotero local API (10.x) advertises a `Last-Modified-Version` header but
+ignores `since=`**, answering an empty list for every value. Trusting that header
+turns an "incremental" sync into a silent no-op that still exits 0. The client
+probes for real `since` support once per run (`ZoteroClient.supports_since`) and
+falls back to the timestamp cursor when it is not usable, so a Zotero version
+that lies about `since` can never make items disappear.
+
+Every run ends with a summary and a machine-readable line:
+
+```
+SYNC COMPLETE — incremental from 2026-09-19T00:00:00Z (library version 4)
+  projects     1
+  papers       3
+  annotations  382
+SYNC_SUMMARY {"mode": "timestamp", "counts": {...}, "total": 421}
+```
+
+`POST /api/tools/zotero-sync` parses that line and returns it as `summary`, and
+the dashboard reports *what changed* (“✅ Synced 3 papers · 382 annotations”)
+instead of a bare “completed” that hides a no-op.
+
+**If newly added items do not appear, run `python sync.py --force` once.** It
+resets the cursor and rebuilds everything from scratch — safe and idempotent,
+just slower.
 
 ## AI enrichment
 
@@ -324,6 +359,15 @@ would alter behaviour or is a product decision rather than a bug:
    is "read ⇔ at least one part and all parts read".
 4. **`contributors.role` uses its own vocabulary** (`lead`/`coauthor`/`ra`/`advisor`)
    while `project_contributors.project_role` is free text.
+5. **Deletions in Zotero are not propagated.** The sync is upsert-only, so an
+   item you delete in Zotero stays in the database (with its claims, annotations
+   and reading history). Detecting it needs a full key-set comparison, and
+   removing a paper cascades destructively — it should be an opt-in
+   `--prune`/`--report-orphans` step, not the default.
+6. **Collections are re-sent on every sync.** Zotero exposes no `dateModified`
+   for collections, so all of them are checked each run (only real changes are
+   written). Harmless at 31 collections; it would need pagination-aware
+   handling at thousands.
 5. **`board/frontend/src/pages/ProjectsPage.jsx`, `components/projects/ProjectList.jsx`
    and `ProjectCard.jsx` are not routed** — they are dead code kept for reference.
 

@@ -4,6 +4,7 @@ Both handlers shell out to the repository scripts; the shared ``_run`` helper
 keeps argument building, timeouts and error reporting identical for the two.
 """
 
+import json
 import os
 import re
 import subprocess
@@ -18,11 +19,16 @@ router = APIRouter(prefix="/api/tools", tags=["Tools"])
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../"))
 ZOTERO_SYNC_DIR = os.path.join(ROOT, "zotero_sync")
 
-SYNC_TIMEOUT_SECONDS = 300
+# A first sync writes thousands of rows to a remote database, so the budget has
+# to be generous; routine syncs finish in seconds.
+SYNC_TIMEOUT_SECONDS = 900
 ENRICH_TIMEOUT_SECONDS = 600
 
 PROVIDERS = ("deepseek", "openai")
 ZOTERO_KEY_RE = re.compile(r"^[A-Za-z0-9]{1,32}$")
+
+# Printed by zotero_sync/sync.py as the last line of every run.
+SYNC_SUMMARY_PREFIX = "SYNC_SUMMARY "
 
 
 class SyncOptions(BaseModel):
@@ -56,13 +62,31 @@ def _run(args: list[str], *, cwd: str, timeout: int, env: dict | None = None) ->
     return {"ok": result.returncode == 0, "output": result.stdout, "error": result.stderr}
 
 
+def _parse_sync_summary(stdout: str) -> dict | None:
+    """Read the machine-readable summary the sync prints as its last line."""
+    for line in reversed(stdout.splitlines()):
+        if line.startswith(SYNC_SUMMARY_PREFIX):
+            try:
+                return json.loads(line[len(SYNC_SUMMARY_PREFIX):])
+            except json.JSONDecodeError:
+                return None
+    return None
+
+
 @router.post("/zotero-sync")
 def run_zotero_sync(opts: SyncOptions = SyncOptions()):
     args = [sys.executable, "sync.py"]
     if opts.force:
         args.append("--force")
 
-    return _run(args, cwd=ZOTERO_SYNC_DIR, timeout=SYNC_TIMEOUT_SECONDS)
+    result = _run(args, cwd=ZOTERO_SYNC_DIR, timeout=SYNC_TIMEOUT_SECONDS)
+
+    # Surface what actually happened — "completed" alone hides a no-op sync.
+    summary = _parse_sync_summary(result.get("output", ""))
+    if summary is not None:
+        result["summary"] = summary
+
+    return result
 
 
 @router.post("/ai-enrichment")
