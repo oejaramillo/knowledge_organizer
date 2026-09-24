@@ -251,7 +251,10 @@ class PaperResponse(PaperBase):
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     authors: List[AuthorResponse] = []
-    parts:      List['PaperPartResponse'] = []
+    # Only the *count* of parts travels with a paper; the parts themselves are
+    # fetched by GET /api/papers/{id}/parts when that tab is opened. Shipping
+    # them here triggered one extra query per paper (an N+1 over the network).
+    n_parts: Optional[int] = 0
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -442,12 +445,27 @@ class AnnotationResponse(BaseModel):
 # ==========================================
 # This one pulls everything together! When you hit your frontend API, 
 # returning this model will give you the project AND all its activities.
-class ProjectDetailedResponse(ProjectResponse):
-    tasks:               List[TaskResponse] = Field(default_factory=list)
-    meetings:            List[MeetingResponse] = Field(default_factory=list)
-    binnacle_entries:    List[BinnacleResponse] = Field(default_factory=list)
+class ProjectCollectionResponse(ProjectResponse):
+    """A reading collection: papers and contributors only.
+
+    Research-only sections (tasks, meetings, binnacle, ideas) are deliberately
+    absent so the API never loads or serialises them for a collection.
+    """
     project_contributors: List[ProjectContributorResponse] = Field(default_factory=list)
-    paper_associations:  List[PaperProjectResponse] = Field(default_factory=list)  # ← add
-    ideas:               List[IdeaResponse] = []
+    paper_associations:   List[PaperProjectResponse] = Field(default_factory=list)
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ProjectSectionsResponse(BaseModel):
+    """The research panels, fetched only when one of them is opened.
+
+    Loading these up front costs several extra round-trips against the remote
+    database for every project view, even when the panels stay closed.
+    """
+    tasks:            List[TaskResponse] = Field(default_factory=list)
+    meetings:         List[MeetingResponse] = Field(default_factory=list)
+    binnacle_entries: List[BinnacleResponse] = Field(default_factory=list)
+    ideas:            List[IdeaResponse] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)

@@ -226,6 +226,45 @@ The sidebar's **Sync Zotero** and **AI Enrichment** buttons call
 to the two CLIs above. The AI button opens a small options modal (full-text,
 force, single zotero key, provider).
 
+### Project pages: keeping them fast
+
+The database lives on Neon, so **every SQL query costs a network round-trip
+(~200 ms)**. Query *count* is therefore what decides how fast a project page
+opens. Three things follow from that:
+
+* **No N+1.** Paper counts (`n_claims`, `n_annotations`, `n_parts`) are computed
+  in SQL, and related rows are eager-loaded in batches. Loading parts lazily
+  during serialisation alone used to cost one query per paper — 39 papers meant
+  48 queries and ~8 seconds.
+* **Panels load when you open them.** A project page returns the project, its
+  contributors and its papers. Tasks, meetings, binnacle and ideas come from
+  `GET /api/projects/{id}/sections`, fetched the first time you click one of
+  those buttons. A collection never requests them at all. Inside a paper, claims,
+  annotations and parts are each fetched only when their tab is opened.
+* **The frontend caches per session.** `hooks/useProject.js` keeps opened
+  projects in memory, so going back to one renders instantly — but it still
+  **revalidates on every selection**, and the cache is read synchronously during
+  render so the previous project's data is never shown under the new project's
+  URL. The same hook discards stale responses, so switching A → B
+  quickly can never leave B showing A's data.
+
+Measured on the largest projects (median of 5 warm runs):
+
+| Project | Before | After |
+|---|---|---|
+| SUTCORE — collection, 39 papers | 7.7 s / 48 queries | **1.2 s / 5 queries** |
+| “Un recorrido por la historia fiscal” — research, 32 papers | 6.3 s / 44 queries | **1.2 s / 6 queries** |
+| “Pensamiento latinoamericano” — collection, 25 papers | 6.0 s / 34 queries | **0.9 s / 5 queries** |
+
+Revisiting a project re-fetches it in the background; the cached copy is shown
+first so the switch feels immediate.
+
+One rule keeps this correct: **`PaperList` derives its rows from props** and
+applies inline edits as small per-paper overrides. Capturing the paper array in
+`useState` (as it used to) makes a refresh invisible — the list keeps whatever it
+saw on mount, which is how a project used to keep showing the *previous*
+project's papers after you navigated back to it.
+
 ### Project tracker
 
 `/tracker` answers one question: *what am I working on, and what am I leaving

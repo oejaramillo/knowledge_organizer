@@ -66,7 +66,7 @@ export default function PaperDetail({ paper, onUpdate, hideAuthors = false }) {
       <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
         {TABS.map(tab => {
           const counts = {
-            Parts:       paper.parts?.length,
+            Parts:       paper.n_parts,
             Claims:      paper.n_claims,
             Annotations: paper.n_annotations,
           };

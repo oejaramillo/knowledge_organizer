@@ -696,3 +696,7 @@ textarea.form-input {
   color: var(--text-muted);
   margin: 6px 0 0;
 }
+/* Loading spinner used while a project is being fetched */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

@@ -10,15 +10,23 @@ export default function PaperList({ paperAssociations = [] }) {
   const [sortBy, setSortBy]         = useState('year_desc');
   const [expandedId, setExpandedId] = useState(null);
 
-  // Local paper state so inline toggles are instant
-  const [localPapers, setLocalPapers] = useState(() =>
-    paperAssociations.map(a => ({ ...a.paper, _assoc: a }))
+  // Papers come from the server through props. Inline toggles are applied as
+  // small per-paper overrides on top, so a background refresh always wins over
+  // stale data instead of being ignored (the old version captured the first
+  // render's papers in useState and never updated them again).
+  const [overrides, setOverrides] = useState({});
+
+  const localPapers = useMemo(
+    () => paperAssociations.map(a => ({
+      ...a.paper,
+      ...(overrides[a.paper.paper_id] || {}),
+      _assoc: a,
+    })),
+    [paperAssociations, overrides]
   );
 
   const handlePaperUpdate = (paperId, patch) => {
-    setLocalPapers(prev =>
-      prev.map(p => p.paper_id === paperId ? { ...p, ...patch } : p)
-    );
+    setOverrides(prev => ({ ...prev, [paperId]: { ...prev[paperId], ...patch } }));
   };
 
   const filtered = useMemo(() => {

@@ -389,3 +389,10 @@ Paper.n_annotations = column_property(
     .correlate_except(Annotation)
     .scalar_subquery()
 )
+
+Paper.n_parts = column_property(
+    select(func.count(PaperPart.part_id))
+    .where(PaperPart.paper_id == Paper.paper_id)
+    .correlate_except(PaperPart)
+    .scalar_subquery()
+)

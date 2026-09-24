@@ -56,9 +56,8 @@ def get_all_papers(db: Session = Depends(get_db)):
     """
     Fetch the entire library of papers.
     """
-    # `authors` is eager by default (selectin); `parts` needs an explicit hint
-    # so the response model does not trigger one query per paper.
-    return db.query(Paper).options(selectinload(Paper.parts)).all()
+    # `authors` is eager by default (selectin) and part counts are computed in SQL.
+    return db.query(Paper).all()
 
 @router.get("/{paper_id}", response_model=PaperResponse)
 def get_paper(paper_id: UUID, db: Session = Depends(get_db)):

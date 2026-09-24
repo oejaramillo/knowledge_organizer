@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import IdeaList from "../ideas/IdeaList";
 import MeetingList from "../meetings/MeetingList";
@@ -6,23 +6,52 @@ import BinnacleList from "../binnacle/BinnacleList";
 import PaperList from '../papers/PaperList';
 import TaskList from "../tasks/TaskList";
 import apiClient from '../../api/client'
+import useProject from '../../hooks/useProject';
 
 
 export default function ProjectDetail() {
   const { project_id } = useParams();
-  const [project, setProject] = useState(null);
-  const [loading, setLoading] = useState(true);
+
+  // Cached + race-safe loading (see hooks/useProject.js)
+  const { project, loading, error: loadError, reload: fetchProject } = useProject(project_id);
+
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [activeSection, setActiveSection] = useState(null);
+
+  // Research panels (tasks/meetings/binnacle/ideas) are fetched the first time
+  // one of them is opened, instead of on every project view.
+  const [sections, setSections] = useState(null);
+  const [sectionsLoading, setSectionsLoading] = useState(false);
   const [editingContributor, setEditingContributor] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [editSaving, setEditSaving] = useState(false);
 
+  const loadSections = useCallback(async () => {
+    setSectionsLoading(true);
+    try {
+      const { data } = await apiClient.get(`/projects/${project_id}/sections`);
+      setSections(data);
+    } catch {
+      setSections(null);
+    } finally {
+      setSectionsLoading(false);
+    }
+  }, [project_id]);
+
   const openSection = (section) => {
-    setActiveSection((prev) => (prev === section ? null : section));
+    const next = activeSection === section ? null : section;
+    setActiveSection(next);
+    if (next && sections === null && !sectionsLoading) loadSections();
   };
+
+  // Children call this after a mutation: refresh the project and, if the panels
+  // were already opened, their data too.
+  const refreshAll = useCallback(() => {
+    fetchProject();
+    if (sections !== null) loadSections();
+  }, [fetchProject, sections, loadSections]);
 
   // Form state
   const [form, setForm] = useState({ name: "", email: "", site: "", project_role: "" });
@@ -33,12 +62,6 @@ export default function ProjectDetail() {
   const [selectedContributor, setSelectedContributor] = useState(null); // existing one picked
   const suggestionsRef = useRef(null);
 
-  const fetchProject = () => {
-    apiClient.get(`/projects/${project_id}`)
-      .then((response) => { setProject(response.data); setLoading(false); })
-      .catch(() => setLoading(false));
-  };
-
   // Load all contributors once when form opens
   useEffect(() => {
     if (showForm) {
@@ -48,11 +71,10 @@ export default function ProjectDetail() {
     }
   }, [showForm]);
 
-  useEffect(() => { fetchProject(); }, [project_id]);
-
-  // Reset active section whenever project changes
+  // Reset panels whenever the project changes
   useEffect(() => {
     setActiveSection(null);
+    setSections(null);
   }, [project_id]);
 
   // Close suggestions on outside click
@@ -195,7 +217,37 @@ export default function ProjectDetail() {
     }
   };
 
-  if (loading) return <p className="empty-state" style={{ padding: "40px" }}>Loading...</p>;
+  if (loading) {
+    return (
+      <div className="project-detail" style={{ padding: "40px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--text-muted)", fontSize: 14 }}>
+          <span style={{
+            width: 14, height: 14, borderRadius: "50%",
+            border: "2px solid var(--border-color)", borderTopColor: "var(--accent-blue)",
+            animation: "spin 0.8s linear infinite", display: "inline-block",
+          }} />
+          Loading project…
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="project-detail" style={{ padding: "40px" }}>
+        <div style={{
+          background: "#fee2e2", border: "1px solid #fca5a5", color: "#991b1b",
+          borderRadius: 10, padding: "14px 18px", fontSize: 13,
+          display: "flex", alignItems: "center", gap: 12, maxWidth: 620,
+        }}>
+          <span style={{ flex: 1 }}>⚠ {loadError}</span>
+          <button className="action-btn" onClick={fetchProject}
+            style={{ borderColor: "#fca5a5", color: "#991b1b" }}>Retry</button>
+        </div>
+      </div>
+    );
+  }
+
   if (!project) return <p className="empty-state" style={{ padding: "40px" }}>Project not found.</p>;
 
   const contributors = project.project_contributors ?? [];
@@ -210,7 +262,7 @@ export default function ProjectDetail() {
       key={project_id}
       paperAssociations={project.paper_associations ?? []}
       projectId={project.project_id}
-      onUpdate={fetchProject}
+      onUpdate={refreshAll}
     />
   );
 
@@ -515,36 +567,51 @@ export default function ProjectDetail() {
         </div>
 
         {/* Ideas */}
-        {activeSection === 'ideas' && (
+        {activeSection === 'ideas' && sectionsLoading && (
+          <div className="section-panel" style={{ marginTop: 20, color: 'var(--text-muted)', fontSize: 13 }}>
+            Loading ideas…
+          </div>
+        )}
+        {activeSection === 'ideas' && !sectionsLoading && (
           <IdeaList
             key={project_id}
-            ideas={project.ideas ?? []}
+            ideas={sections?.ideas ?? []}
             projectId={project.project_id}
-            onIdeaAdded={fetchProject}
+            onIdeaAdded={refreshAll}
           />
         )}
 
         {/* Meetings */}
-        {activeSection === 'meetings' && (
+        {activeSection === 'meetings' && sectionsLoading && (
+          <div className="section-panel" style={{ marginTop: 20, color: 'var(--text-muted)', fontSize: 13 }}>
+            Loading meetings…
+          </div>
+        )}
+        {activeSection === 'meetings' && !sectionsLoading && (
           <MeetingList
             key={project_id}
-            meetings={project.meetings}
+            meetings={sections?.meetings ?? []}
             projectId={project.project_id}
-            fetchProject={fetchProject}
+            fetchProject={refreshAll}
             projectContributors={project.project_contributors}
           />
         )}
 
         {/* Binnacle */}
-        {activeSection === 'binnacle' && (
+        {activeSection === 'binnacle' && sectionsLoading && (
+          <div className="section-panel" style={{ marginTop: 20, color: 'var(--text-muted)', fontSize: 13 }}>
+            Loading binnacle…
+          </div>
+        )}
+        {activeSection === 'binnacle' && !sectionsLoading && (
           <BinnacleList
             key={project_id}
-            binnacleEntries={project.binnacle_entries}
+            binnacleEntries={sections?.binnacle_entries ?? []}
             projectId={project.project_id}
-            fetchProject={fetchProject}
+            fetchProject={refreshAll}
             projectContributors={project.project_contributors}
-            meetings={project.meetings}
-            tasks={project.tasks}
+            meetings={sections?.meetings ?? []}
+            tasks={sections?.tasks ?? []}
           />
         )}
 
@@ -552,13 +619,18 @@ export default function ProjectDetail() {
         {activeSection === 'papers' && papersPanel}
 
         {/* Tasks */}
-        {activeSection === 'tasks' && (
+        {activeSection === 'tasks' && sectionsLoading && (
+          <div className="section-panel" style={{ marginTop: 20, color: 'var(--text-muted)', fontSize: 13 }}>
+            Loading tasks…
+          </div>
+        )}
+        {activeSection === 'tasks' && !sectionsLoading && (
           <TaskList
             key={project_id}
-            tasks={project.tasks ?? []}
+            tasks={sections?.tasks ?? []}
             projectId={project.project_id}
             projectContributors={project.project_contributors}
-            fetchProject={fetchProject}
+            fetchProject={refreshAll}
           />
         )}
 

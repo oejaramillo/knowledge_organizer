@@ -16,10 +16,11 @@ from models.core import (
 )
 
 from schemas.core import (
-    ProjectCreate, 
-    ProjectResponse, 
-    ProjectDetailedResponse, 
-    ProjectContributorCreate, 
+    ProjectCreate,
+    ProjectResponse,
+    ProjectSectionsResponse,
+    ProjectCollectionResponse,
+    ProjectContributorCreate,
     ProjectContributorResponse,
     ProjectContributorUpdate,
     ProjectUpdate
@@ -29,6 +30,28 @@ from schemas.core import (
 router = APIRouter(
     prefix="/api/projects",
     tags=["Projects"]
+)
+
+# Eager-load options. A `collection` is a reading list, so it only ever loads
+# its papers; the research panels (tasks, meetings, binnacle, ideas) are fetched
+# by GET /api/projects/{id}/sections when one is opened. Every relationship here
+# is one round-trip against the (remote) database, so the split matters.
+base_options = (
+    # Contributors are part of the default view, so they stay here.
+    selectinload(Project.project_contributors)
+        .selectinload(ProjectContributor.contributor),
+    selectinload(Project.paper_associations)
+        .selectinload(PaperProject.paper)
+        .selectinload(Paper.authors),
+)
+
+research_options = (
+    selectinload(Project.binnacle_entries).selectinload(ProjectBinnacle.author),
+    selectinload(Project.binnacle_entries).selectinload(ProjectBinnacle.task),
+    selectinload(Project.binnacle_entries).selectinload(ProjectBinnacle.meeting),
+    selectinload(Project.tasks).selectinload(ProjectTask.assignee),
+    selectinload(Project.meetings),
+    selectinload(Project.ideas),
 )
 
 @router.get("/", response_model=List[ProjectResponse])
@@ -56,35 +79,47 @@ def update_project(project_id: UUID, patch: ProjectUpdate, db: Session = Depends
     db.refresh(project)
     return project
 
-@router.get("/{project_id}", response_model=ProjectDetailedResponse)
+@router.get("/{project_id}", response_model=None)
 def get_project(project_id: UUID, db: Session = Depends(get_db)):
     """
-    Fetch a specific project by its UUID, including all its nested 
-    Tasks, Meetings, and Binnacle entries for the dashboard.
+    Fetch a specific project by its UUID.
+
+    A `collection` is a reading list: it only ever needs its papers, so the
+    research-only relationships (tasks, meetings, binnacle, ideas) are not loaded
+    and not returned. Each relationship costs a network round-trip against the
+    remote database, so skipping four of them matters on large projects.
+
+    Both shapes are serialised explicitly: handing FastAPI the ORM object would
+    let it walk the unloaded relationships and lazy-load them one by one.
     """
-    # Use selectinload to fetch all relationships efficiently!
     project = (
         db.query(Project)
-        .options(
-            selectinload(Project.binnacle_entries).selectinload(ProjectBinnacle.author),
-            selectinload(Project.binnacle_entries).selectinload(ProjectBinnacle.task),
-            selectinload(Project.binnacle_entries).selectinload(ProjectBinnacle.meeting),
-            selectinload(Project.tasks).selectinload(ProjectTask.assignee),
-            selectinload(Project.meetings),
-            selectinload(Project.ideas),
-            selectinload(Project.project_contributors)
-                .selectinload(ProjectContributor.contributor),
-            selectinload(Project.paper_associations)
-                .selectinload(PaperProject.paper)
-                .selectinload(Paper.authors),   # ← new
-        )
+        .options(*base_options)
         .filter(Project.project_id == project_id)
         .first()
     )
-        
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-        
+
+    return ProjectCollectionResponse.model_validate(project).model_dump(mode="json")
+
+
+@router.get("/{project_id}/sections", response_model=ProjectSectionsResponse)
+def get_project_sections(project_id: UUID, db: Session = Depends(get_db)):
+    """Tasks, meetings, binnacle entries and ideas — one panel at a time.
+
+    These are only needed once the user opens a panel, and each costs a network
+    round-trip, so they are deliberately kept out of the project payload.
+    """
+    project = (
+        db.query(Project)
+        .options(*research_options)
+        .filter(Project.project_id == project_id)
+        .first()
+    )
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
     return project
 
 @router.post("/", response_model=ProjectResponse, status_code=201)
